@@ -17,6 +17,7 @@ import AdminAgents from './pages/admin/Agents'
 import AdminFinance from './pages/admin/Finance'
 import CompanyDashboard from './pages/company/Dashboard'
 import CompanyPackageDetail from './pages/company/PackageDetail'
+import CompanyFinance from './pages/company/Finance'
 import DriverDashboard from './pages/driver/Dashboard'
 import DriverPackageDetail from './pages/driver/PackageDetail'
 
@@ -92,6 +93,7 @@ export default function App() {
           >
             <Route index element={<CompanyDashboard />} />
             <Route path="packages/:id" element={<CompanyPackageDetail />} />
+            <Route path="finance" element={<CompanyFinance />} />
           </Route>
 
           <Route

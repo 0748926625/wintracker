@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { listCompanyPackages } from '../../services/packages'
-import { getCompanyFinancialSummary, type CompanyFinancialSummary } from '../../services/finance'
 import type { PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -25,11 +24,6 @@ export default function CompanyDashboard() {
   const { packages, loading } = useRealtimePackages(fetcher, 'company_id', profile?.company_id)
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
-  const [finance, setFinance] = useState<CompanyFinancialSummary | null>(null)
-
-  useEffect(() => {
-    getCompanyFinancialSummary().then(setFinance)
-  }, [])
 
   if (loading) return <PageLoader />
 
@@ -49,14 +43,13 @@ export default function CompanyDashboard() {
       <h1 className="mb-1 text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
       <p className="mb-6 text-gray-500">Vos colis</p>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Total" value={packages.length} />
         <StatCard label="En attente" value={count('EN_ATTENTE')} />
         <StatCard label="Récupérés" value={count('RECUPERE')} />
         <StatCard label="En livraison" value={count('EN_LIVRAISON')} />
         <StatCard label="Livrés" value={count('LIVRE')} accent="text-green-600" />
         <StatCard label="Échecs" value={count('ECHEC')} accent="text-red-600" />
-        <StatCard label="Vos gains (F)" value={finance?.earnings ?? 0} accent="text-brand-600" />
       </div>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">

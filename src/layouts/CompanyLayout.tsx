@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { LogOut, Building2 } from 'lucide-react'
+import { NavLink, Outlet } from 'react-router-dom'
+import { LogOut, Building2, Package, Wallet } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { getCompany } from '../services/companies'
 import type { Company } from '../types/database'
@@ -35,6 +35,29 @@ export function CompanyLayout() {
             <p className="text-sm font-bold text-brand-800">{company.name}</p>
           </div>
         )}
+        <nav className="flex gap-1 px-4 sm:px-8">
+          <NavLink
+            to="/company"
+            end
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium ${
+                isActive ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            <Package className="h-4 w-4" /> Colis
+          </NavLink>
+          <NavLink
+            to="/company/finance"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium ${
+                isActive ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            <Wallet className="h-4 w-4" /> Finances
+          </NavLink>
+        </nav>
       </header>
       <main className="mx-auto max-w-4xl p-4 sm:p-8">
         <Outlet />
