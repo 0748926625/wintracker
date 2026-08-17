@@ -18,8 +18,10 @@ dist-ssr
 # Claude Code session files
 .claude/
 
-# Notes de config perso (contient des identifiants de projet)
+# Notes de config perso (contiennent des identifiants de projet)
 infosprojet.txt
+MOTS_DE_PASSE.txt
+Guide-Utilisation-WINTRACKER.pdf
 
 # Editor directories and files
 .vscode/*

@@ -29,9 +29,9 @@ export default function AdminDrivers() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Livreurs</h1>
-        <Button onClick={() => setCreating(true)} className="!px-3 !py-2 text-sm">
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4" /> Nouveau livreur
         </Button>
       </div>

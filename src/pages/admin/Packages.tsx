@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { listAllPackages, createPackage, type CreatePackageInput } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
@@ -34,9 +35,9 @@ export default function AdminPackages() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Colis</h1>
-        <Button onClick={() => setCreating(true)} className="!px-3 !py-2 text-sm">
+        <Button onClick={() => setCreating(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4" /> Nouveau colis
         </Button>
       </div>
@@ -102,7 +103,12 @@ export default function AdminPackages() {
   )
 }
 
+function lastCompanyKey(profileId: string) {
+  return `wintracker:lastCompany:${profileId}`
+}
+
 function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { profile } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [agents, setAgents] = useState<GareAgent[]>([])
   const [newAgentName, setNewAgentName] = useState('')
@@ -123,8 +129,22 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    listCompanies().then(setCompanies)
+    listCompanies().then((list) => {
+      setCompanies(list)
+      if (profile?.role !== 'AGENT' || list.length === 0) return
+
+      if (list.length === 1) {
+        setForm((prev) => ({ ...prev, company_id: list[0].id }))
+        return
+      }
+
+      const remembered = localStorage.getItem(lastCompanyKey(profile.id))
+      if (remembered && list.some((c) => c.id === remembered)) {
+        setForm((prev) => ({ ...prev, company_id: remembered }))
+      }
+    })
     listGareAgents().then(setAgents)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleAddAgent() {
@@ -142,6 +162,9 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
     setError(null)
     try {
       await createPackage({ ...form, agent_id: form.agent_id || undefined })
+      if (profile?.role === 'AGENT' && form.company_id) {
+        localStorage.setItem(lastCompanyKey(profile.id), form.company_id)
+      }
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')

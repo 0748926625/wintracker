@@ -1,6 +1,7 @@
-// Edge Function : création d'un utilisateur (COMPANY_USER, DRIVER ou AGENT) par un SUPER_ADMIN.
-// Nécessaire car la création d'un utilisateur Supabase Auth requiert la service_role key,
-// qui ne doit jamais être exposée au frontend.
+// Edge Function : création/suppression d'un utilisateur (COMPANY_USER, DRIVER
+// ou AGENT) par un SUPER_ADMIN. Nécessaire car la création/suppression d'un
+// utilisateur Supabase Auth requiert la service_role key, qui ne doit jamais
+// être exposée au frontend.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -16,10 +17,14 @@ interface CreateUserBody {
   company_id?: string
 }
 
+interface DeleteUserBody {
+  user_id: string
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
 }
 
 function json(body: unknown, status = 200) {
@@ -31,7 +36,9 @@ function json(body: unknown, status = 200) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS })
-  if (req.method !== 'POST') return json({ error: 'Méthode non autorisée' }, 405)
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
+    return json({ error: 'Méthode non autorisée' }, 405)
+  }
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) return json({ error: 'Non authentifié' }, 401)
@@ -56,6 +63,25 @@ Deno.serve(async (req) => {
 
   if (!callerProfile || callerProfile.role !== 'SUPER_ADMIN') {
     return json({ error: 'Accès refusé : réservé au SUPER_ADMIN' }, 403)
+  }
+
+  if (req.method === 'DELETE') {
+    let deleteBody: DeleteUserBody
+    try {
+      deleteBody = await req.json()
+    } catch {
+      return json({ error: 'Corps de requête invalide' }, 400)
+    }
+
+    if (!deleteBody.user_id) return json({ error: 'user_id requis' }, 400)
+    if (deleteBody.user_id === caller.id) {
+      return json({ error: 'Vous ne pouvez pas supprimer votre propre compte' }, 400)
+    }
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(deleteBody.user_id)
+    if (deleteError) return json({ error: deleteError.message }, 400)
+
+    return json({ deleted: true })
   }
 
   let body: CreateUserBody

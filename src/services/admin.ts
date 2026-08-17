@@ -22,6 +22,19 @@ export async function createUser(input: CreateUserInput): Promise<void> {
   if (error) throw new Error(await extractErrorMessage(error))
 }
 
+export async function deleteUser(userId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Session expirée, reconnectez-vous.')
+
+  const { error } = await supabase.functions.invoke('admin-create-user', {
+    method: 'DELETE',
+    body: { user_id: userId },
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (error) throw new Error(await extractErrorMessage(error))
+}
+
 async function extractErrorMessage(error: unknown): Promise<string> {
   if (error instanceof FunctionsHttpError) {
     try {
