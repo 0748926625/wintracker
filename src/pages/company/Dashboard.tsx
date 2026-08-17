@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { listCompanyPackages } from '../../services/packages'
 import { getCompany } from '../../services/companies'
+import { getCompanyFinancialSummary, type CompanyFinancialSummary } from '../../services/finance'
 import type { Company, Package, PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -38,10 +39,15 @@ export default function CompanyDashboard() {
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
   const [company, setCompany] = useState<Company | null>(null)
+  const [finance, setFinance] = useState<CompanyFinancialSummary | null>(null)
 
   useEffect(() => {
     if (profile?.company_id) getCompany(profile.company_id).then(setCompany)
   }, [profile?.company_id])
+
+  useEffect(() => {
+    getCompanyFinancialSummary().then(setFinance)
+  }, [])
 
   if (loading) return <PageLoader />
 
@@ -61,13 +67,14 @@ export default function CompanyDashboard() {
       <h1 className="mb-1 text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
       <p className="mb-6 text-gray-500">Vos colis</p>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <StatCard label="Total" value={packages.length} />
         <StatCard label="En attente" value={count('EN_ATTENTE')} />
         <StatCard label="Récupérés" value={count('RECUPERE')} />
         <StatCard label="En livraison" value={count('EN_LIVRAISON')} />
         <StatCard label="Livrés" value={count('LIVRE')} accent="text-green-600" />
         <StatCard label="Échecs" value={count('ECHEC')} accent="text-red-600" />
+        <StatCard label="Vos gains (F)" value={finance?.earnings ?? 0} accent="text-brand-600" />
       </div>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
@@ -95,18 +102,18 @@ export default function CompanyDashboard() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[880px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">N° colis</th>
               <th className="px-4 py-3 font-medium">Destinataire</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Adresse</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Commission par colis</th>
+              <th className="px-4 py-3 font-medium">Adresse</th>
+              <th className="px-4 py-3 font-medium">Prix</th>
+              <th className="px-4 py-3 font-medium">Commission par colis</th>
               <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Livreur</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Date</th>
+              <th className="px-4 py-3 font-medium">Livreur</th>
+              <th className="px-4 py-3 font-medium">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -121,11 +128,9 @@ export default function CompanyDashboard() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">{p.delivery_address}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
-                  {p.price ? `${p.price} F` : '—'}
-                </td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
+                <td className="px-4 py-3 text-gray-600">{p.delivery_address}</td>
+                <td className="px-4 py-3 text-gray-600">{p.price ? `${p.price} F` : '—'}</td>
+                <td className="px-4 py-3 text-gray-600">
                   {(() => {
                     const commission = commissionForPackage(p, company)
                     return commission != null ? `${commission} F` : '—'
@@ -134,10 +139,8 @@ export default function CompanyDashboard() {
                 <td className="px-4 py-3">
                   <StatusBadge status={p.status} />
                 </td>
-                <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
-                  {p.driver?.profile?.name || '—'}
-                </td>
-                <td className="hidden px-4 py-3 text-gray-500 md:table-cell">
+                <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">
                   {new Date(p.created_at).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
