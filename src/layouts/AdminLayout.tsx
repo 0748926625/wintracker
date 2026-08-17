@@ -94,6 +94,12 @@ export function AdminLayout() {
         </header>
 
         <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
+          {activeCompany && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2.5">
+              <Building2 className="h-4 w-4 shrink-0 text-brand-600" />
+              <p className="text-sm font-bold text-brand-800">{activeCompany.name}</p>
+            </div>
+          )}
           <Outlet />
         </main>
 
