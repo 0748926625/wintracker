@@ -1,7 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Building2, Truck, Users, Wallet, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, Wallet, LogOut, Repeat } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useGare } from '../hooks/useGare'
 
 interface NavLinkItem {
   to: string
@@ -24,12 +25,27 @@ const superAdminLinks: NavLinkItem[] = [
 
 export function AdminLayout() {
   const { profile, signOut } = useAuth()
+  const { activeCompany, canSwitch, changeGare } = useGare()
   const links = profile?.role === 'SUPER_ADMIN' ? [...baseLinks, ...superAdminLinks] : baseLinks
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-60 flex-col border-r border-gray-200 bg-white p-4 md:flex">
         <Logo />
+        {activeCompany && (
+          <div className="mt-4 rounded-xl bg-brand-50 px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-brand-600">Gare</p>
+            <p className="truncate text-sm font-semibold text-brand-800">{activeCompany.name}</p>
+            {canSwitch && (
+              <button
+                onClick={changeGare}
+                className="mt-1 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+              >
+                <Repeat className="h-3 w-3" /> Changer
+              </button>
+            )}
+          </div>
+        )}
         <nav className="mt-8 flex flex-1 flex-col gap-1">
           {links.map(({ to, label, icon: Icon, end }) => (
             <NavLink
@@ -60,7 +76,18 @@ export function AdminLayout() {
 
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
-          <Logo compact />
+          <div>
+            <Logo compact />
+            {activeCompany && (
+              <button
+                onClick={canSwitch ? changeGare : undefined}
+                className="mt-0.5 flex items-center gap-1 text-xs font-medium text-brand-600"
+              >
+                {activeCompany.name}
+                {canSwitch && <Repeat className="h-3 w-3" />}
+              </button>
+            )}
+          </div>
           <button onClick={signOut} className="text-gray-500 hover:text-red-600">
             <LogOut className="h-5 w-5" />
           </button>

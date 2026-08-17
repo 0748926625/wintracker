@@ -1,14 +1,23 @@
 import { useCallback } from 'react'
 import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
-import { listAllPackages } from '../../services/packages'
+import { useGare } from '../../hooks/useGare'
+import { listAllPackages, listCompanyPackages } from '../../services/packages'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import type { PackageStatus } from '../../types/database'
 
 export default function AdminDashboard() {
-  const fetcher = useCallback(() => listAllPackages(), [])
-  const { packages, loading } = useRealtimePackages(fetcher, 'all', 'all')
+  const { activeCompanyId } = useGare()
+  const fetcher = useCallback(
+    () => (activeCompanyId ? listCompanyPackages(activeCompanyId) : listAllPackages()),
+    [activeCompanyId],
+  )
+  const { packages, loading } = useRealtimePackages(
+    fetcher,
+    activeCompanyId ? 'company_id' : 'all',
+    activeCompanyId ?? 'all',
+  )
 
   if (loading) return <PageLoader />
 

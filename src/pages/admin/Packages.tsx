@@ -2,8 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useGare } from '../../hooks/useGare'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
-import { listAllPackages, createPackage, type CreatePackageInput } from '../../services/packages'
+import {
+  listAllPackages,
+  listCompanyPackages,
+  createPackage,
+  type CreatePackageInput,
+} from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
 import { PRICE_OPTIONS, type Company, type GareAgent, type PackageStatus } from '../../types/database'
@@ -24,8 +30,16 @@ const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
 ]
 
 export default function AdminPackages() {
-  const fetcher = useCallback(() => listAllPackages(), [])
-  const { packages, loading } = useRealtimePackages(fetcher, 'all', 'all')
+  const { activeCompanyId } = useGare()
+  const fetcher = useCallback(
+    () => (activeCompanyId ? listCompanyPackages(activeCompanyId) : listAllPackages()),
+    [activeCompanyId],
+  )
+  const { packages, loading } = useRealtimePackages(
+    fetcher,
+    activeCompanyId ? 'company_id' : 'all',
+    activeCompanyId ?? 'all',
+  )
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [creating, setCreating] = useState(false)
 
@@ -103,18 +117,16 @@ export default function AdminPackages() {
   )
 }
 
-function lastCompanyKey(profileId: string) {
-  return `wintracker:lastCompany:${profileId}`
-}
-
 function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { profile } = useAuth()
+  const { activeCompany } = useGare()
+  const isAgent = profile?.role === 'AGENT'
   const [companies, setCompanies] = useState<Company[]>([])
   const [agents, setAgents] = useState<GareAgent[]>([])
   const [newAgentName, setNewAgentName] = useState('')
   const [newAgentPhone, setNewAgentPhone] = useState('')
   const [form, setForm] = useState<CreatePackageInput>({
-    company_id: '',
+    company_id: activeCompany?.id ?? '',
     agent_id: '',
     external_reference: '',
     sender_name: '',
@@ -129,23 +141,9 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    listCompanies().then((list) => {
-      setCompanies(list)
-      if (profile?.role !== 'AGENT' || list.length === 0) return
-
-      if (list.length === 1) {
-        setForm((prev) => ({ ...prev, company_id: list[0].id }))
-        return
-      }
-
-      const remembered = localStorage.getItem(lastCompanyKey(profile.id))
-      if (remembered && list.some((c) => c.id === remembered)) {
-        setForm((prev) => ({ ...prev, company_id: remembered }))
-      }
-    })
+    if (!isAgent) listCompanies().then(setCompanies)
     listGareAgents().then(setAgents)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [isAgent])
 
   async function handleAddAgent() {
     if (!newAgentName.trim()) return
@@ -162,9 +160,6 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
     setError(null)
     try {
       await createPackage({ ...form, agent_id: form.agent_id || undefined })
-      if (profile?.role === 'AGENT' && form.company_id) {
-        localStorage.setItem(lastCompanyKey(profile.id), form.company_id)
-      }
       onSaved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -177,18 +172,24 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
     <Modal title="Nouveau colis" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <Field label="Compagnie">
-          <Select
-            required
-            value={form.company_id}
-            onChange={(e) => setForm({ ...form, company_id: e.target.value })}
-          >
-            <option value="">Sélectionner…</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          {isAgent ? (
+            <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700">
+              {activeCompany?.name}
+            </p>
+          ) : (
+            <Select
+              required
+              value={form.company_id}
+              onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+            >
+              <option value="">Sélectionner…</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
 
         <Field label="Agent de la gare (facultatif)">
@@ -243,7 +244,7 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
 
         <Field label="Référence interne compagnie (facultatif)">
           <Input
-            placeholder="ex: numéro de gare"
+            placeholder="ex: numéro de colis"
             value={form.external_reference}
             onChange={(e) => setForm({ ...form, external_reference: e.target.value })}
           />

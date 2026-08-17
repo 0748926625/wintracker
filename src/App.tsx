@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
+import { GareProvider } from './hooks/useGare'
 import { ProtectedRoute, homeForRole } from './layouts/ProtectedRoute'
 import { PageLoader } from './components/ui/PageLoader'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -38,7 +39,9 @@ export default function App() {
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENT']}>
-                <AdminLayout />
+                <GareProvider>
+                  <AdminLayout />
+                </GareProvider>
               </ProtectedRoute>
             }
           >
