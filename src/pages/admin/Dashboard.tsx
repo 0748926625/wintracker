@@ -3,11 +3,13 @@ import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw }
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useGare } from '../../hooks/useGare'
+import { useMonthFilter } from '../../hooks/useMonthFilter'
 import { listAllPackages, listCompanyPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
+import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
 import type { Company, PackageStatus } from '../../types/database'
 
 export default function AdminDashboard() {
@@ -38,32 +40,38 @@ export default function AdminDashboard() {
     activeCompanyId ?? 'all',
   )
 
+  const mf = useMonthFilter()
+
   if (loading) return <PageLoader />
 
-  const count = (status: PackageStatus) => packages.filter((p) => p.status === status).length
+  const scoped = packages.filter((p) => mf.inRange(p.created_at))
+  const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
 
   return (
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        {isSuperAdmin && (
-          <Select
-            value={selectedCompanyId}
-            onChange={(e) => setSelectedCompanyId(e.target.value)}
-            className="sm:max-w-xs"
-          >
-            <option value="ALL">Toutes les compagnies</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {isSuperAdmin && (
+            <Select
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              className="sm:max-w-xs"
+            >
+              <option value="ALL">Toutes les compagnies</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          <MonthSwitcher mf={mf} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <StatCard label="Total colis" value={packages.length} icon={Package} />
+        <StatCard label="Total colis" value={scoped.length} icon={Package} />
         <StatCard label="En attente" value={count('EN_ATTENTE')} icon={Clock} />
         <StatCard label="Récupérés" value={count('RECUPERE')} icon={PackageCheck} />
         <StatCard label="En livraison" value={count('EN_LIVRAISON')} icon={Truck} />

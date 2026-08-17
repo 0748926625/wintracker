@@ -3,25 +3,15 @@ import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
+import { useMonthFilter } from '../../hooks/useMonthFilter'
 import { listCompanyPackages } from '../../services/packages'
 import { getCompany } from '../../services/companies'
-import { getCompanyFinancialSummary, type CompanyFinancialSummary } from '../../services/finance'
-import type { Company, Package, PackageStatus } from '../../types/database'
+import { commissionForPackage } from '../../lib/commission'
+import type { Company, PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatCard } from '../../components/ui/StatCard'
-
-function commissionForPackage(p: Package, company: Company | null): number | null {
-  if (!company || p.status !== 'LIVRE' || p.price == null) return null
-  if (company.commission_type === 'RATE') {
-    return company.commission_rate != null ? Math.round((p.price * company.commission_rate) / 100) : null
-  }
-  if (company.commission_type === 'FIXED_PER_TIER') {
-    const tier = company.commission_tiers?.find((t) => t.price === p.price)
-    return tier ? tier.amount : null
-  }
-  return null
-}
+import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -39,20 +29,18 @@ export default function CompanyDashboard() {
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
   const [company, setCompany] = useState<Company | null>(null)
-  const [finance, setFinance] = useState<CompanyFinancialSummary | null>(null)
+  const mf = useMonthFilter()
 
   useEffect(() => {
     if (profile?.company_id) getCompany(profile.company_id).then(setCompany)
   }, [profile?.company_id])
 
-  useEffect(() => {
-    getCompanyFinancialSummary().then(setFinance)
-  }, [])
-
   if (loading) return <PageLoader />
 
-  const count = (status: PackageStatus) => packages.filter((p) => p.status === status).length
-  const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
+  const scoped = packages.filter((p) => mf.inRange(p.created_at))
+  const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
+  const earnings = scoped.reduce((sum, p) => sum + (commissionForPackage(p, company) ?? 0), 0)
+  const byStatus = filter === 'TOUS' ? scoped : scoped.filter((p) => p.status === filter)
   const query = search.trim().toLowerCase()
   const filtered = query
     ? byStatus.filter(
@@ -64,17 +52,20 @@ export default function CompanyDashboard() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
+      <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
+        <MonthSwitcher mf={mf} />
+      </div>
       <p className="mb-6 text-gray-500">Vos colis</p>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
-        <StatCard label="Total" value={packages.length} />
+        <StatCard label="Total" value={scoped.length} />
         <StatCard label="En attente" value={count('EN_ATTENTE')} />
         <StatCard label="Récupérés" value={count('RECUPERE')} />
         <StatCard label="En livraison" value={count('EN_LIVRAISON')} />
         <StatCard label="Livrés" value={count('LIVRE')} accent="text-green-600" />
         <StatCard label="Échecs" value={count('ECHEC')} accent="text-red-600" />
-        <StatCard label="Vos gains (F)" value={finance?.earnings ?? 0} accent="text-brand-600" />
+        <StatCard label="Vos gains (F)" value={earnings} accent="text-brand-600" />
       </div>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">

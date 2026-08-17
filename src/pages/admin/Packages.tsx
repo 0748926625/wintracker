@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
+import { useMonthFilter } from '../../hooks/useMonthFilter'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import {
   listAllPackages,
@@ -18,6 +19,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select, Textarea } from '../../components/ui/Field'
+import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -45,10 +47,9 @@ export default function AdminPackages() {
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
   const [companyFilter, setCompanyFilter] = useState('ALL')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [creating, setCreating] = useState(false)
+  const mf = useMonthFilter()
 
   useEffect(() => {
     if (isSuperAdmin) listCompanies().then(setFilterCompanies)
@@ -61,20 +62,15 @@ export default function AdminPackages() {
     isSuperAdmin && companyFilter !== 'ALL'
       ? byStatus.filter((p) => p.company_id === companyFilter)
       : byStatus
-  const byDate = byCompany.filter((p) => {
-    const created = new Date(p.created_at)
-    if (dateFrom && created < new Date(`${dateFrom}T00:00:00`)) return false
-    if (dateTo && created > new Date(`${dateTo}T23:59:59`)) return false
-    return true
-  })
+  const byMonth = byCompany.filter((p) => mf.inRange(p.created_at))
   const query = search.trim().toLowerCase()
   const filtered = query
-    ? byDate.filter(
+    ? byMonth.filter(
         (p) =>
           p.external_reference?.toLowerCase().includes(query) ||
           p.tracking_number.toLowerCase().includes(query),
       )
-    : byDate
+    : byMonth
 
   return (
     <div>
@@ -126,21 +122,7 @@ export default function AdminPackages() {
           </Select>
         )}
 
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="!w-auto"
-          />
-          <span>au</span>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="!w-auto"
-          />
-        </div>
+        <MonthSwitcher mf={mf} />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
