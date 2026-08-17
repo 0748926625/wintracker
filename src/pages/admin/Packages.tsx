@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
@@ -41,11 +41,20 @@ export default function AdminPackages() {
     activeCompanyId ?? 'all',
   )
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
+  const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
 
   if (loading) return <PageLoader />
 
-  const filtered = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
+  const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
+  const query = search.trim().toLowerCase()
+  const filtered = query
+    ? byStatus.filter(
+        (p) =>
+          p.external_reference?.toLowerCase().includes(query) ||
+          p.tracking_number.toLowerCase().includes(query),
+      )
+    : byStatus
 
   return (
     <div>
@@ -70,13 +79,25 @@ export default function AdminPackages() {
         ))}
       </div>
 
+      <div className="relative mb-4 max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par numéro de colis…"
+          className="w-full rounded-xl border border-gray-300 py-2.5 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Tracking</th>
+              <th className="px-4 py-3 font-medium">N° colis</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Compagnie</th>
               <th className="px-4 py-3 font-medium">Destinataire</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Livreur</th>
             </tr>
@@ -85,12 +106,18 @@ export default function AdminPackages() {
             {filtered.map((p) => (
               <tr key={p.id} className="cursor-pointer hover:bg-gray-50">
                 <td className="px-4 py-3">
-                  <Link to={`/admin/packages/${p.id}`} className="font-medium text-brand-600">
-                    {p.tracking_number}
+                  <Link to={`/admin/packages/${p.id}`} className="block font-medium text-brand-600">
+                    {p.external_reference || p.tracking_number}
                   </Link>
+                  {p.external_reference && (
+                    <span className="text-xs text-gray-400">{p.tracking_number}</span>
+                  )}
                 </td>
                 <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">{p.company?.name}</td>
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
+                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
+                  {p.price ? `${p.price} F` : '—'}
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={p.status} />
                 </td>
@@ -101,8 +128,8 @@ export default function AdminPackages() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  Aucun colis.
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  {query ? 'Aucun colis ne correspond à cette recherche.' : 'Aucun colis.'}
                 </td>
               </tr>
             )}
