@@ -7,16 +7,18 @@ import {
   deleteCompany,
   setCommissionTiers,
   getCommissionTiers,
+  listCompanyUsers,
   type CompanyInput,
 } from '../../services/companies'
 import { listCompanyGroups, createCompanyGroup } from '../../services/groups'
-import { createUser } from '../../services/admin'
+import { createUser, deleteUser } from '../../services/admin'
 import {
   COMMISSION_TYPE_LABELS,
   PRICE_OPTIONS,
   type CommissionType,
   type Company,
   type CompanyGroup,
+  type Profile,
 } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Button } from '../../components/ui/Button'
@@ -25,12 +27,19 @@ import { Field, Input, Select } from '../../components/ui/Field'
 
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[] | null>(null)
+  const [companyUsers, setCompanyUsers] = useState<Record<string, Profile[]>>({})
   const [editing, setEditing] = useState<Company | 'new' | null>(null)
   const [userFor, setUserFor] = useState<Company | null>(null)
   const [deleting, setDeleting] = useState<Company | null>(null)
+  const [deletingUser, setDeletingUser] = useState<Profile | null>(null)
 
   async function refresh() {
-    setCompanies(await listCompanies())
+    const list = await listCompanies()
+    setCompanies(list)
+    const entries = await Promise.all(
+      list.map(async (c) => [c.id, await listCompanyUsers(c.id)] as const),
+    )
+    setCompanyUsers(Object.fromEntries(entries))
   }
 
   useEffect(() => {
@@ -55,6 +64,7 @@ export default function AdminCompanies() {
               <th className="px-4 py-3 font-medium">Nom</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Groupe</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Commission</th>
+              <th className="px-4 py-3 font-medium">Utilisateur(s)</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
@@ -67,6 +77,26 @@ export default function AdminCompanies() {
                 </td>
                 <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
                   {c.commission_type ? COMMISSION_TYPE_LABELS[c.commission_type] : '—'}
+                </td>
+                <td className="px-4 py-3 text-gray-600">
+                  {companyUsers[c.id]?.length ? (
+                    <ul className="space-y-1">
+                      {companyUsers[c.id].map((u) => (
+                        <li key={u.id} className="flex items-center gap-1.5">
+                          <span>{u.name}</span>
+                          <button
+                            onClick={() => setDeletingUser(u)}
+                            title="Supprimer ce compte"
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    '— aucun —'
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-3">
@@ -94,7 +124,7 @@ export default function AdminCompanies() {
             ))}
             {companies.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                   Aucune compagnie pour le moment.
                 </td>
               </tr>
@@ -118,7 +148,10 @@ export default function AdminCompanies() {
         <CompanyUserModal
           company={userFor}
           onClose={() => setUserFor(null)}
-          onSaved={() => setUserFor(null)}
+          onSaved={async () => {
+            setUserFor(null)
+            await refresh()
+          }}
         />
       )}
 
@@ -132,7 +165,62 @@ export default function AdminCompanies() {
           }}
         />
       )}
+
+      {deletingUser && (
+        <DeleteCompanyUserModal
+          user={deletingUser}
+          onClose={() => setDeletingUser(null)}
+          onDeleted={async () => {
+            setDeletingUser(null)
+            await refresh()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function DeleteCompanyUserModal({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: Profile
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    setLoading(true)
+    setError(null)
+    try {
+      await deleteUser(user.user_id)
+      onDeleted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Supprimer le compte" onClose={onClose}>
+      <p className="mb-4 text-gray-600">
+        Confirmez-vous la suppression définitive du compte de <strong>{user.name}</strong> ? Il ne
+        pourra plus se connecter à l'application.
+      </p>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
+          Supprimer
+        </Button>
+      </div>
+    </Modal>
   )
 }
 

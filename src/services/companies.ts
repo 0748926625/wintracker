@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { CommissionType, Company, CompanyCommissionTier } from '../types/database'
+import type { CommissionType, Company, CompanyCommissionTier, Profile } from '../types/database'
 
 const COMPANY_SELECT = `*, group:company_groups(*), commission_tiers:company_commission_tiers(*)`
 
@@ -83,4 +83,15 @@ export async function getCommissionTiers(companyId: string): Promise<CompanyComm
     .eq('company_id', companyId)
   if (error) throw error
   return data as CompanyCommissionTier[]
+}
+
+export async function listCompanyUsers(companyId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'COMPANY_USER')
+    .eq('company_id', companyId)
+    .order('name')
+  if (error) throw error
+  return data as Profile[]
 }
