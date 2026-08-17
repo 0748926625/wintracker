@@ -1,13 +1,26 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { listCompanyPackages } from '../../services/packages'
-import type { PackageStatus } from '../../types/database'
+import { getCompany } from '../../services/companies'
+import type { Company, Package, PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatCard } from '../../components/ui/StatCard'
+
+function commissionForPackage(p: Package, company: Company | null): number | null {
+  if (!company || p.status !== 'LIVRE' || p.price == null) return null
+  if (company.commission_type === 'RATE') {
+    return company.commission_rate != null ? Math.round((p.price * company.commission_rate) / 100) : null
+  }
+  if (company.commission_type === 'FIXED_PER_TIER') {
+    const tier = company.commission_tiers?.find((t) => t.price === p.price)
+    return tier ? tier.amount : null
+  }
+  return null
+}
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -24,6 +37,11 @@ export default function CompanyDashboard() {
   const { packages, loading } = useRealtimePackages(fetcher, 'company_id', profile?.company_id)
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
+  const [company, setCompany] = useState<Company | null>(null)
+
+  useEffect(() => {
+    if (profile?.company_id) getCompany(profile.company_id).then(setCompany)
+  }, [profile?.company_id])
 
   if (loading) return <PageLoader />
 
@@ -85,6 +103,7 @@ export default function CompanyDashboard() {
               <th className="px-4 py-3 font-medium">Destinataire</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Adresse</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">Commission par colis</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Livreur</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Date</th>
@@ -106,6 +125,12 @@ export default function CompanyDashboard() {
                 <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
                   {p.price ? `${p.price} F` : '—'}
                 </td>
+                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
+                  {(() => {
+                    const commission = commissionForPackage(p, company)
+                    return commission != null ? `${commission} F` : '—'
+                  })()}
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={p.status} />
                 </td>
@@ -119,7 +144,7 @@ export default function CompanyDashboard() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   {query ? 'Aucun colis ne correspond à cette recherche.' : 'Aucun colis.'}
                 </td>
               </tr>
