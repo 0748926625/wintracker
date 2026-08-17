@@ -74,7 +74,7 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
           <div>
             <Logo compact />

@@ -36,12 +36,12 @@ export default function AdminDrivers() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Nom</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Téléphone</th>
+              <th className="px-4 py-3 font-medium">Téléphone</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium">Colis affectés</th>
               <th className="px-4 py-3 font-medium"></th>
@@ -51,9 +51,7 @@ export default function AdminDrivers() {
             {drivers.map((d) => (
               <tr key={d.id}>
                 <td className="px-4 py-3 font-medium text-gray-900">{d.profile?.name}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
-                  {d.profile?.phone || '—'}
-                </td>
+                <td className="px-4 py-3 text-gray-600">{d.profile?.phone || '—'}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold ${

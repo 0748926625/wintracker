@@ -73,13 +73,13 @@ export default function AdminCompanies() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Nom</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Groupe</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Commission par colis</th>
+              <th className="px-4 py-3 font-medium">Groupe</th>
+              <th className="px-4 py-3 font-medium">Commission par colis</th>
               <th className="px-4 py-3 font-medium">Utilisateur(s)</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -88,12 +88,8 @@ export default function AdminCompanies() {
             {companies.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
-                  {c.group?.name || '—'}
-                </td>
-                <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
-                  {commissionPerPackage(c)}
-                </td>
+                <td className="px-4 py-3 text-gray-600">{c.group?.name || '—'}</td>
+                <td className="px-4 py-3 text-gray-600">{commissionPerPackage(c)}</td>
                 <td className="px-4 py-3 text-gray-600">
                   {companyUsers[c.id]?.length ? (
                     <ul className="space-y-1">

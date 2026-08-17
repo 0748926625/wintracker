@@ -46,12 +46,12 @@ export default function AdminAgents() {
         compagnie assignée, un agent ne voit aucun colis.
       </p>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Nom</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Téléphone</th>
+              <th className="px-4 py-3 font-medium">Téléphone</th>
               <th className="px-4 py-3 font-medium">Compagnies assignées</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -60,7 +60,7 @@ export default function AdminAgents() {
             {agents.map((a) => (
               <tr key={a.id}>
                 <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">{a.phone || '—'}</td>
+                <td className="px-4 py-3 text-gray-600">{a.phone || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">
                   {agentCompanies[a.id]?.length
                     ? agentCompanies[a.id].map((c) => c.name).join(', ')

@@ -125,17 +125,17 @@ export default function AdminPackages() {
         <MonthSwitcher mf={mf} />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">N° colis</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Compagnie</th>
+              <th className="px-4 py-3 font-medium">Compagnie</th>
               <th className="px-4 py-3 font-medium">Destinataire</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
+              <th className="px-4 py-3 font-medium">Prix</th>
               <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Livreur</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Date</th>
+              <th className="px-4 py-3 font-medium">Livreur</th>
+              <th className="px-4 py-3 font-medium">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -149,18 +149,14 @@ export default function AdminPackages() {
                     <span className="text-xs text-gray-400">{p.tracking_number}</span>
                   )}
                 </td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">{p.company?.name}</td>
+                <td className="px-4 py-3 text-gray-600">{p.company?.name}</td>
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
-                <td className="hidden px-4 py-3 text-gray-600 sm:table-cell">
-                  {p.price ? `${p.price} F` : '—'}
-                </td>
+                <td className="px-4 py-3 text-gray-600">{p.price ? `${p.price} F` : '—'}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={p.status} />
                 </td>
-                <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
-                  {p.driver?.profile?.name || '—'}
-                </td>
-                <td className="hidden px-4 py-3 text-gray-500 md:table-cell">
+                <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
+                <td className="px-4 py-3 text-gray-500">
                   {new Date(p.created_at).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
