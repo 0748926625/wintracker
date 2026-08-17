@@ -23,7 +23,7 @@ export default function CompanyPackageDetail() {
 
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <Info label="Compagnie" value={pkg.company?.name} />
-          <Info label="Réf. interne" value={pkg.external_reference} />
+          <Info label="Numéro de colis" value={pkg.external_reference} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
           <Info label="Destinataire" value={pkg.recipient_name} />
           <Info label="Téléphone" value={pkg.recipient_phone} />
