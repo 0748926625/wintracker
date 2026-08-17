@@ -1,0 +1,1161 @@
+PROMPT CLAUDE CODE — WINTRACKER MVP
+
+Je veux développer rapidement une application Web Progressive Web App (PWA) appelée WINTRACKER.
+
+WINTRACKER est une plateforme de gestion et de suivi des colis exploitée par WINNER EXPRESS.
+
+WINNER EXPRESS est une structure de livraison qui travaille principalement avec des compagnies de transport interurbain.
+
+==================================================
+1. OBJECTIF DU MVP
+==================================================
+
+Je veux construire le minimum vital permettant à WINNER EXPRESS de gérer ses livraisons et permettant aux compagnies de transport partenaires de suivre leurs colis en temps réel.
+
+Le scénario principal est :
+
+COMPAGNIE DE TRANSPORT
+        ↓
+remet le colis à WINNER EXPRESS
+        ↓
+WINNER EXPRESS affecte le colis à un livreur
+        ↓
+LIVREUR récupère le colis
+        ↓
+LIVREUR effectue la livraison
+        ↓
+DESTINATAIRE reçoit le colis
+        ↓
+COMPAGNIE voit immédiatement le nouveau statut
+
+Le MVP doit permettre :
+
+1. WINNER EXPRESS de gérer les compagnies partenaires.
+2. WINNER EXPRESS de gérer les livreurs.
+3. WINNER EXPRESS de créer les colis.
+4. WINNER EXPRESS d'affecter les colis aux livreurs.
+5. Les livreurs de consulter leurs colis.
+6. Les livreurs de modifier le statut des colis.
+7. Les livreurs de confirmer une livraison.
+8. Les livreurs de déclarer un échec.
+9. Les compagnies partenaires de consulter leurs colis.
+10. Les compagnies de voir les changements de statut EN TEMPS RÉEL.
+11. Conserver l'historique des changements de statut.
+
+Ne pas développer de fonctionnalités secondaires pour le moment.
+
+==================================================
+2. STACK TECHNIQUE
+==================================================
+
+Frontend :
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+- PWA
+- Lucide React
+
+Backend :
+
+- Supabase
+- PostgreSQL
+- Supabase Auth
+- Supabase Realtime
+- Supabase Storage uniquement pour les photos de preuve de livraison.
+
+Hébergement :
+
+- GitHub Pages
+
+Base de données :
+
+- Supabase Free pour le MVP.
+
+L'application doit être conçue pour pouvoir fonctionner avec un coût d'infrastructure initial de 0 FCFA, hors éventuel nom de domaine.
+
+==================================================
+3. ARCHITECTURE MULTI-TENANT
+==================================================
+
+WINTRACKER doit être conçu dès le départ comme une application multi-tenant.
+
+Chaque compagnie de transport partenaire constitue un tenant.
+
+Exemple :
+
+WINNER EXPRESS
+│
+├── Compagnie A
+│   ├── utilisateurs
+│   └── colis
+│
+├── Compagnie B
+│   ├── utilisateurs
+│   └── colis
+│
+└── Compagnie C
+    ├── utilisateurs
+    └── colis
+
+REGLE ABSOLUE :
+
+Une compagnie ne doit jamais pouvoir consulter les colis d'une autre compagnie.
+
+Cette sécurité doit être appliquée au niveau PostgreSQL/Supabase avec RLS.
+
+Ne jamais compter uniquement sur le frontend pour sécuriser les données.
+
+==================================================
+4. UTILISATEURS
+==================================================
+
+Pour le MVP, créer uniquement 3 rôles.
+
+--------------------------------------------------
+SUPER_ADMIN
+--------------------------------------------------
+
+Utilisateur de WINNER EXPRESS.
+
+Peut :
+
+- gérer les compagnies ;
+- gérer les livreurs ;
+- créer des colis ;
+- modifier des colis ;
+- affecter les colis ;
+- voir tous les colis ;
+- voir tous les historiques.
+
+--------------------------------------------------
+COMPANY_USER
+--------------------------------------------------
+
+Utilisateur d'une compagnie partenaire.
+
+Peut :
+
+- se connecter ;
+- voir uniquement les colis de sa compagnie ;
+- rechercher un colis ;
+- consulter le statut ;
+- consulter le détail ;
+- consulter l'historique.
+
+Ne peut jamais :
+
+- voir les colis d'une autre compagnie ;
+- gérer les livreurs ;
+- accéder aux données internes de WINNER EXPRESS.
+
+--------------------------------------------------
+DRIVER
+--------------------------------------------------
+
+Livreur WINNER EXPRESS.
+
+Peut :
+
+- se connecter ;
+- voir les colis qui lui sont affectés ;
+- consulter les informations nécessaires à la livraison ;
+- confirmer la récupération ;
+- démarrer la livraison ;
+- confirmer la livraison ;
+- déclarer un échec.
+
+==================================================
+5. BASE DE DONNÉES MINIMALE
+==================================================
+
+Créer uniquement les tables nécessaires.
+
+--------------------------------------------------
+companies
+--------------------------------------------------
+
+id
+name
+phone
+email
+address
+created_at
+
+--------------------------------------------------
+profiles
+--------------------------------------------------
+
+id
+user_id
+company_id nullable
+role
+name
+phone
+created_at
+
+role :
+
+SUPER_ADMIN
+COMPANY_USER
+DRIVER
+
+Pour un SUPER_ADMIN :
+company_id = NULL
+
+Pour un COMPANY_USER :
+company_id = compagnie correspondante
+
+Pour un DRIVER :
+company_id = NULL ou organisation WINNER EXPRESS selon l'architecture retenue.
+
+--------------------------------------------------
+drivers
+--------------------------------------------------
+
+id
+profile_id
+status
+created_at
+
+status :
+
+ACTIVE
+INACTIVE
+
+--------------------------------------------------
+packages
+--------------------------------------------------
+
+id
+tracking_number
+company_id
+driver_id nullable
+
+sender_name
+sender_phone
+
+recipient_name
+recipient_phone
+
+delivery_address
+
+description
+
+status
+
+created_at
+updated_at
+delivered_at nullable
+
+--------------------------------------------------
+package_events
+--------------------------------------------------
+
+id
+package_id
+old_status
+new_status
+changed_by
+comment
+created_at
+
+Cette table est obligatoire.
+
+Elle permet de conserver tout l'historique du colis.
+
+--------------------------------------------------
+delivery_proofs
+--------------------------------------------------
+
+id
+package_id
+receiver_name
+photo_url nullable
+comment nullable
+created_at
+
+==================================================
+6. NUMÉRO DE SUIVI
+==================================================
+
+Chaque colis doit avoir un numéro de suivi unique.
+
+Format :
+
+WT-2026-000001
+WT-2026-000002
+WT-2026-000003
+
+Le numéro doit être généré de manière fiable côté base de données ou backend.
+
+Ne jamais dépendre uniquement du frontend pour garantir l'unicité.
+
+==================================================
+7. STATUTS
+==================================================
+
+Utiliser uniquement ces statuts dans le MVP :
+
+EN_ATTENTE
+RECUPERE
+EN_LIVRAISON
+LIVRE
+ECHEC
+RETOUR
+
+Workflow normal :
+
+EN_ATTENTE
+↓
+RECUPERE
+↓
+EN_LIVRAISON
+↓
+LIVRE
+
+Workflow en cas d'échec :
+
+EN_LIVRAISON
+↓
+ECHEC
+
+Puis éventuellement :
+
+ECHEC
+↓
+EN_LIVRAISON
+
+ou
+
+ECHEC
+↓
+RETOUR
+
+Les transitions doivent être contrôlées.
+
+Chaque changement de statut doit créer automatiquement un événement dans package_events.
+
+==================================================
+8. DASHBOARD WINNER EXPRESS
+==================================================
+
+Créer un dashboard simple et efficace.
+
+Afficher :
+
+- Total colis
+- En attente
+- Récupérés
+- En livraison
+- Livrés
+- Échecs
+- Retours
+
+Menu principal :
+
+Dashboard
+Colis
+Compagnies
+Livreurs
+
+Pas de statistiques complexes dans le MVP.
+
+==================================================
+9. GESTION DES COMPAGNIES
+==================================================
+
+Le SUPER_ADMIN peut :
+
+- créer une compagnie ;
+- modifier une compagnie ;
+- consulter ses informations ;
+- créer un utilisateur pour cette compagnie.
+
+Exemple :
+
+Compagnie :
+
+UTB Transport
+
+Téléphone :
+
+07 XX XX XX XX
+
+Email :
+
+contact@utb.example
+
+Utilisateur :
+
+Jean Kouassi
+
+Email :
+
+jean@example.com
+
+==================================================
+10. GESTION DES LIVREURS
+==================================================
+
+Le SUPER_ADMIN peut :
+
+- créer un livreur ;
+- modifier un livreur ;
+- activer/désactiver un livreur.
+
+Afficher :
+
+Nom
+Téléphone
+Statut
+Nombre de colis affectés
+
+==================================================
+11. GESTION DES COLIS
+==================================================
+
+Le SUPER_ADMIN peut créer un colis.
+
+Informations :
+
+Compagnie
+
+Expéditeur :
+- nom
+- téléphone
+
+Destinataire :
+- nom
+- téléphone
+- adresse
+
+Colis :
+- description
+
+Après création :
+
+status = EN_ATTENTE
+
+Le SUPER_ADMIN peut :
+
+- modifier le colis ;
+- affecter un livreur ;
+- consulter le détail ;
+- consulter l'historique.
+
+==================================================
+12. ESPACE COMPAGNIE
+==================================================
+
+Créer un espace très simple.
+
+Dashboard :
+
+"Bonjour Jean"
+
+"Vos colis"
+
+Afficher :
+
+Total
+En attente
+Récupérés
+En livraison
+Livrés
+Échecs
+
+Liste :
+
+Tracking
+Destinataire
+Adresse
+Statut
+Livreur
+Date
+
+Filtres :
+
+Tous
+En attente
+Récupérés
+En livraison
+Livrés
+Échecs
+
+==================================================
+13. DETAIL D'UN COLIS
+==================================================
+
+Créer une page :
+
+/company/packages/:id
+
+Afficher :
+
+WINTRACKER
+
+WT-2026-000001
+
+Compagnie :
+UTB Transport
+
+Destinataire :
+Jean Kouassi
+
+Téléphone :
+07 XX XX XX XX
+
+Adresse :
+Cocody Angré
+
+Statut actuel :
+
+🟢 LIVRÉ
+
+Puis afficher une timeline.
+
+Exemple :
+
+17 août — 08:30
+Colis enregistré
+
+17 août — 09:15
+Colis récupéré
+
+17 août — 10:20
+En livraison
+
+17 août — 12:05
+Livré
+
+==================================================
+14. TEMPS RÉEL
+==================================================
+
+C'est une fonctionnalité OBLIGATOIRE.
+
+Utiliser Supabase Realtime.
+
+Lorsqu'un livreur modifie le statut :
+
+LIVREUR
+↓
+Supabase
+↓
+Realtime
+↓
+ESPACE COMPAGNIE
+
+Le responsable de la compagnie doit voir automatiquement le nouveau statut sans actualiser la page.
+
+Exemple :
+
+Livreur :
+
+[ LIVRER ]
+
+Le statut devient :
+
+LIVRE
+
+Le responsable de la compagnie voit immédiatement :
+
+🟢 LIVRÉ
+
+sans recharger la page.
+
+Implémenter correctement :
+
+- subscription ;
+- mise à jour de l'interface ;
+- reconnexion ;
+- unsubscribe lorsque le composant est démonté.
+
+==================================================
+15. ESPACE LIVREUR
+==================================================
+
+L'interface livreur doit être MOBILE-FIRST.
+
+Le livreur utilise principalement un smartphone.
+
+Dashboard :
+
+Bonjour Koffi
+
+Mes colis
+
+À récupérer : 3
+En livraison : 2
+Livrés aujourd'hui : 5
+
+Liste des colis.
+
+Exemple :
+
+WT-2026-000123
+
+Jean Kouassi
+
+Cocody Angré
+
+[ VOIR ]
+
+==================================================
+16. ACTIONS LIVREUR
+==================================================
+
+Si statut = EN_ATTENTE :
+
+[ MARQUER COMME RÉCUPÉRÉ ]
+
+Si statut = RECUPERE :
+
+[ COMMENCER LA LIVRAISON ]
+
+Si statut = EN_LIVRAISON :
+
+[ LIVRER ]
+[ ÉCHEC ]
+
+Si statut = ECHEC :
+
+[ NOUVELLE TENTATIVE ]
+[ RETOUR ]
+
+==================================================
+17. RÉCUPÉRATION
+==================================================
+
+Lorsque le livreur clique :
+
+MARQUER COMME RÉCUPÉRÉ
+
+Demander confirmation.
+
+Puis :
+
+status = RECUPERE
+
+Créer automatiquement un package_event.
+
+==================================================
+18. DÉBUT DE LIVRAISON
+==================================================
+
+Lorsque le livreur clique :
+
+COMMENCER LA LIVRAISON
+
+Changer :
+
+status = EN_LIVRAISON
+
+Créer automatiquement un package_event.
+
+==================================================
+19. CONFIRMATION DE LIVRAISON
+==================================================
+
+Lorsque le livreur clique :
+
+LIVRER
+
+Afficher un formulaire simple :
+
+Nom de la personne ayant reçu le colis
+
+Commentaire facultatif
+
+Photo facultative
+
+Bouton :
+
+[ CONFIRMER LA LIVRAISON ]
+
+Après confirmation :
+
+status = LIVRE
+
+delivered_at = date/heure actuelle
+
+Créer delivery_proof.
+
+Créer package_event.
+
+==================================================
+20. ÉCHEC DE LIVRAISON
+==================================================
+
+Lorsque le livreur clique :
+
+ÉCHEC
+
+Afficher :
+
+Motif :
+
+- Destinataire absent
+- Téléphone inaccessible
+- Mauvaise adresse
+- Refus du colis
+- Autre
+
+Commentaire facultatif.
+
+Puis :
+
+status = ECHEC
+
+Créer package_event.
+
+==================================================
+21. RLS ET SÉCURITÉ
+==================================================
+
+Créer des policies Supabase RLS.
+
+SUPER_ADMIN :
+
+Accès à toutes les données nécessaires.
+
+COMPANY_USER :
+
+Peut uniquement accéder aux packages :
+
+packages.company_id = company_id de son profil.
+
+DRIVER :
+
+Peut uniquement accéder aux packages :
+
+packages.driver_id = son driver_id.
+
+Une compagnie A ne doit jamais pouvoir récupérer les données de la compagnie B.
+
+Tester les RLS directement.
+
+La sécurité ne doit jamais dépendre uniquement du frontend.
+
+==================================================
+22. AUTHENTIFICATION
+==================================================
+
+Utiliser Supabase Auth.
+
+Créer :
+
+/login
+
+Après connexion :
+
+SUPER_ADMIN
+→ /admin
+
+COMPANY_USER
+→ /company
+
+DRIVER
+→ /driver
+
+Ajouter :
+
+- logout ;
+- protection des routes ;
+- gestion de session ;
+- redirection automatique.
+
+==================================================
+23. PWA
+==================================================
+
+Configurer une vraie PWA.
+
+Prévoir :
+
+- manifest ;
+- icônes ;
+- installation Android ;
+- installation desktop ;
+- service worker.
+
+L'application doit être agréable à utiliser depuis un téléphone.
+
+Pas besoin d'un système offline complexe dans le MVP.
+
+==================================================
+24. DESIGN
+==================================================
+
+WINTRACKER doit avoir un design moderne, professionnel et simple.
+
+Couleur principale :
+
+ROUGE
+
+Identité :
+
+WINTRACKER
+Powered by Winner Express
+
+Priorités :
+
+- lisibilité ;
+- rapidité ;
+- simplicité ;
+- responsive ;
+- mobile-first.
+
+Livreur :
+interface très simple avec gros boutons.
+
+Compagnie :
+dashboard clair avec statuts très visibles.
+
+Admin :
+tableaux et cartes statistiques simples.
+
+Ne pas ajouter d'animations complexes.
+
+==================================================
+25. GITHUB PAGES
+==================================================
+
+Le frontend doit être déployable sur GitHub Pages.
+
+Créer :
+
+.github/workflows/deploy.yml
+
+Le workflow doit :
+
+1. installer les dépendances ;
+2. lancer le build ;
+3. déployer automatiquement sur GitHub Pages.
+
+Configurer correctement Vite pour GitHub Pages.
+
+Prévoir :
+
+.env.example
+
+avec :
+
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+
+Ne jamais committer les fichiers .env contenant des secrets.
+
+==================================================
+26. STRUCTURE DU PROJET
+==================================================
+
+Garder une architecture simple.
+
+Exemple :
+
+src/
+  components/
+  pages/
+  layouts/
+  hooks/
+  services/
+  types/
+  lib/
+
+supabase/
+  migrations/
+
+Ne pas surarchitecturer.
+
+Ne pas créer une architecture compliquée qui ralentit le MVP.
+
+==================================================
+27. CE QUI EST EXCLU DU MVP
+==================================================
+
+NE PAS développer maintenant :
+
+- paiements ;
+- facturation ;
+- GPS ;
+- cartographie ;
+- géolocalisation temps réel ;
+- optimisation des tournées ;
+- SMS ;
+- WhatsApp ;
+- notifications push ;
+- API externe ;
+- import Excel ;
+- export Excel ;
+- statistiques avancées ;
+- gestion complexe des agences ;
+- tarification automatique ;
+- application mobile native ;
+- mode offline avancé ;
+- système complexe de permissions.
+
+Ces fonctionnalités seront ajoutées après validation du MVP.
+
+==================================================
+28. HEALTH CHECK SUPABASE
+==================================================
+
+Ne pas créer de fausses données ou de faux colis uniquement pour maintenir artificiellement l'activité de la base.
+
+Le MVP doit rester propre.
+
+Si nécessaire plus tard, prévoir un mécanisme technique de health check séparé des données métier.
+
+Ne jamais générer de fausses livraisons ou de faux événements.
+
+==================================================
+29. ORDRE DE DÉVELOPPEMENT
+==================================================
+
+Développer dans cet ordre :
+
+ÉTAPE 1
+
+Initialiser :
+
+React
+TypeScript
+Vite
+Tailwind
+React Router
+PWA
+
+ÉTAPE 2
+
+Configurer Supabase.
+
+ÉTAPE 3
+
+Créer les migrations PostgreSQL.
+
+ÉTAPE 4
+
+Créer l'authentification.
+
+ÉTAPE 5
+
+Créer les profils et rôles.
+
+ÉTAPE 6
+
+Créer les RLS.
+
+ÉTAPE 7
+
+Créer le dashboard Admin.
+
+ÉTAPE 8
+
+Créer la gestion des compagnies.
+
+ÉTAPE 9
+
+Créer la gestion des livreurs.
+
+ÉTAPE 10
+
+Créer la gestion des colis.
+
+ÉTAPE 11
+
+Créer l'espace livreur.
+
+ÉTAPE 12
+
+Créer l'espace compagnie.
+
+ÉTAPE 13
+
+Créer l'historique.
+
+ÉTAPE 14
+
+Ajouter Supabase Realtime.
+
+ÉTAPE 15
+
+Ajouter les preuves de livraison.
+
+ÉTAPE 16
+
+Tester le scénario complet.
+
+ÉTAPE 17
+
+Préparer GitHub Pages.
+
+==================================================
+30. SCÉNARIO DE TEST OBLIGATOIRE
+==================================================
+
+Créer :
+
+COMPAGNIE :
+
+UTB Transport
+
+UTILISATEUR :
+
+Jean Kouassi
+Role : COMPANY_USER
+
+LIVREUR :
+
+Koffi Yao
+Role : DRIVER
+
+COLIS :
+
+WT-2026-000001
+
+Compagnie :
+UTB Transport
+
+Expéditeur :
+Moussa Traoré
+
+Destinataire :
+Jean Kouassi
+
+Téléphone :
+07 XX XX XX XX
+
+Adresse :
+Cocody Angré
+
+Scénario :
+
+1. Admin crée le colis.
+
+2. Jean Kouassi se connecte.
+
+3. Jean voit le colis.
+
+4. Admin affecte le colis à Koffi.
+
+5. Koffi se connecte.
+
+6. Koffi voit le colis.
+
+7. Koffi clique :
+
+"RÉCUPÉRÉ"
+
+8. Jean voit immédiatement :
+
+"RÉCUPÉRÉ"
+
+9. Koffi clique :
+
+"COMMENCER LA LIVRAISON"
+
+10. Jean voit immédiatement :
+
+"EN LIVRAISON"
+
+11. Koffi clique :
+
+"LIVRER"
+
+12. Koffi renseigne :
+
+Nom du réceptionnaire.
+
+13. Koffi confirme.
+
+14. Le colis devient :
+
+"LIVRÉ"
+
+15. Jean voit immédiatement :
+
+"LIVRÉ"
+
+16. Jean consulte l'historique et voit toutes les étapes.
+
+Tester également :
+
+COMPAGNIE A
+
+ne doit pas pouvoir voir les colis de
+
+COMPAGNIE B.
+
+==================================================
+31. CRITÈRE DE RÉUSSITE DU MVP
+==================================================
+
+Le MVP est considéré comme terminé lorsque le scénario suivant fonctionne parfaitement :
+
+COMPAGNIE
+    ↓
+COLIS
+    ↓
+WINNER EXPRESS
+    ↓
+LIVREUR
+    ↓
+RÉCUPÉRATION
+    ↓
+EN LIVRAISON
+    ↓
+LIVRÉ
+    ↓
+COMPAGNIE INFORMÉE EN TEMPS RÉEL
+
+Et lorsque :
+
+- les données sont sécurisées ;
+- chaque compagnie ne voit que ses colis ;
+- chaque livreur ne voit que ses colis ;
+- l'historique est conservé ;
+- le temps réel fonctionne ;
+- l'application est responsive ;
+- la PWA fonctionne ;
+- le projet peut être déployé sur GitHub Pages.
+
+==================================================
+32. RÈGLE PRINCIPALE
+==================================================
+
+JE VEUX LE MVP LE PLUS SIMPLE ET LE PLUS RAPIDE POSSIBLE.
+
+Ne cherche pas à construire toute la plateforme logistique dès maintenant.
+
+Le cœur du produit est :
+
+"PERMETTRE À WINNER EXPRESS DE GÉRER UN COLIS ET À LA COMPAGNIE QUI L'A ENVOYÉ DE SAVOIR EN TEMPS RÉEL OÙ EN EST CE COLIS."
+
+Toute fonctionnalité qui ne sert pas directement ce scénario doit être reportée.
+
+Avant de coder :
+
+1. analyse rapidement l'architecture ;
+2. présente le schéma des tables ;
+3. présente les rôles ;
+4. présente les RLS ;
+5. présente le workflow des statuts.
+
+Puis commence immédiatement l'implémentation.
+
+Ne demande pas de confirmation pour chaque petite décision technique.
+
+Prends les décisions raisonnables toi-même.
+
+À chaque étape :
+- code ;
+- vérifie les erreurs ;
+- corrige ;
+- teste ;
+- puis continue.
+
+L'objectif est d'obtenir le plus rapidement possible une première version réellement fonctionnelle de WINTRACKER.

@@ -1,0 +1,102 @@
+import { NavLink, Outlet } from 'react-router-dom'
+import type { LucideIcon } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, Wallet, LogOut } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
+
+interface NavLinkItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  end?: boolean
+}
+
+const baseLinks: NavLinkItem[] = [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/packages', label: 'Colis', icon: Package },
+]
+
+const superAdminLinks: NavLinkItem[] = [
+  { to: '/admin/companies', label: 'Compagnies', icon: Building2 },
+  { to: '/admin/drivers', label: 'Livreurs', icon: Truck },
+  { to: '/admin/agents', label: 'Agents Wintrack', icon: Users },
+  { to: '/admin/finance', label: 'Finances', icon: Wallet },
+]
+
+export function AdminLayout() {
+  const { profile, signOut } = useAuth()
+  const links = profile?.role === 'SUPER_ADMIN' ? [...baseLinks, ...superAdminLinks] : baseLinks
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="hidden w-60 flex-col border-r border-gray-200 bg-white p-4 md:flex">
+        <Logo />
+        <nav className="mt-8 flex flex-1 flex-col gap-1">
+          {links.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-100'
+                }`
+              }
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="border-t border-gray-200 pt-4">
+          <p className="mb-2 truncate text-sm font-medium text-gray-700">{profile?.name}</p>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" /> Déconnexion
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex min-h-screen flex-1 flex-col">
+        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 md:hidden">
+          <Logo compact />
+          <button onClick={signOut} className="text-gray-500 hover:text-red-600">
+            <LogOut className="h-5 w-5" />
+          </button>
+        </header>
+
+        <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
+          <Outlet />
+        </main>
+
+        <nav className="fixed inset-x-0 bottom-0 flex border-t border-gray-200 bg-white md:hidden">
+          {links.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+                  isActive ? 'text-brand-600' : 'text-gray-500'
+                }`
+              }
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </div>
+  )
+}
+
+function Logo({ compact = false }: { compact?: boolean }) {
+  return (
+    <div>
+      <span className="text-xl font-extrabold tracking-tight text-brand-600">WINTRACKER</span>
+      {!compact && <p className="text-xs text-gray-400">Powered by Winner Express</p>}
+    </div>
+  )
+}
