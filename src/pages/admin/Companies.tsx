@@ -25,6 +25,22 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select } from '../../components/ui/Field'
 
+function commissionPerPackage(c: Company): string {
+  if (c.commission_type === 'RATE') {
+    return c.commission_rate != null ? `${c.commission_rate} % / colis` : '—'
+  }
+  if (c.commission_type === 'FIXED_PER_TIER') {
+    const tiers = c.commission_tiers ?? []
+    if (tiers.length === 0) return '—'
+    return tiers
+      .slice()
+      .sort((a, b) => a.price - b.price)
+      .map((t) => `${t.price}F→${t.amount}F`)
+      .join(' · ')
+  }
+  return '—'
+}
+
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[] | null>(null)
   const [companyUsers, setCompanyUsers] = useState<Record<string, Profile[]>>({})
@@ -63,7 +79,7 @@ export default function AdminCompanies() {
             <tr>
               <th className="px-4 py-3 font-medium">Nom</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Groupe</th>
-              <th className="hidden px-4 py-3 font-medium md:table-cell">Commission</th>
+              <th className="hidden px-4 py-3 font-medium md:table-cell">Commission par colis</th>
               <th className="px-4 py-3 font-medium">Utilisateur(s)</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -76,7 +92,7 @@ export default function AdminCompanies() {
                   {c.group?.name || '—'}
                 </td>
                 <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
-                  {c.commission_type ? COMMISSION_TYPE_LABELS[c.commission_type] : '—'}
+                  {commissionPerPackage(c)}
                 </td>
                 <td className="px-4 py-3 text-gray-600">
                   {companyUsers[c.id]?.length ? (
