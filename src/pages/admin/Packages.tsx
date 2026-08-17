@@ -100,6 +100,7 @@ export default function AdminPackages() {
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Prix</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Livreur</th>
+              <th className="hidden px-4 py-3 font-medium md:table-cell">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -124,11 +125,14 @@ export default function AdminPackages() {
                 <td className="hidden px-4 py-3 text-gray-600 md:table-cell">
                   {p.driver?.profile?.name || '—'}
                 </td>
+                <td className="hidden px-4 py-3 text-gray-500 md:table-cell">
+                  {new Date(p.created_at).toLocaleDateString('fr-FR')}
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                   {query ? 'Aucun colis ne correspond à cette recherche.' : 'Aucun colis.'}
                 </td>
               </tr>
