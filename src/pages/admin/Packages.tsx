@@ -30,6 +30,8 @@ const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
 ]
 
 export default function AdminPackages() {
+  const { profile } = useAuth()
+  const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
   const { activeCompanyId } = useGare()
   const fetcher = useCallback(
     () => (activeCompanyId ? listCompanyPackages(activeCompanyId) : listAllPackages()),
@@ -42,19 +44,37 @@ export default function AdminPackages() {
   )
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
+  const [companyFilter, setCompanyFilter] = useState('ALL')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    if (isSuperAdmin) listCompanies().then(setFilterCompanies)
+  }, [isSuperAdmin])
 
   if (loading) return <PageLoader />
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
+  const byCompany =
+    isSuperAdmin && companyFilter !== 'ALL'
+      ? byStatus.filter((p) => p.company_id === companyFilter)
+      : byStatus
+  const byDate = byCompany.filter((p) => {
+    const created = new Date(p.created_at)
+    if (dateFrom && created < new Date(`${dateFrom}T00:00:00`)) return false
+    if (dateTo && created > new Date(`${dateTo}T23:59:59`)) return false
+    return true
+  })
   const query = search.trim().toLowerCase()
   const filtered = query
-    ? byStatus.filter(
+    ? byDate.filter(
         (p) =>
           p.external_reference?.toLowerCase().includes(query) ||
           p.tracking_number.toLowerCase().includes(query),
       )
-    : byStatus
+    : byDate
 
   return (
     <div>
@@ -79,15 +99,48 @@ export default function AdminPackages() {
         ))}
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher par numéro de colis…"
-          className="w-full rounded-xl border border-gray-300 py-2.5 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
-        />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative max-w-sm flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par numéro de colis…"
+            className="w-full rounded-xl border border-gray-300 py-2.5 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
+        </div>
+
+        {isSuperAdmin && (
+          <Select
+            value={companyFilter}
+            onChange={(e) => setCompanyFilter(e.target.value)}
+            className="w-full sm:w-auto"
+          >
+            <option value="ALL">Toutes les compagnies</option>
+            {filterCompanies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
+
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="!w-auto"
+          />
+          <span>au</span>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="!w-auto"
+          />
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
