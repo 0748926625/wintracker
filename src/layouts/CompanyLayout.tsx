@@ -1,17 +1,11 @@
-import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { LogOut, Building2, Package, Wallet } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { getCompany } from '../services/companies'
-import type { Company } from '../types/database'
+import { useCompanyGroup } from '../hooks/useCompanyGroup'
 
 export function CompanyLayout() {
   const { profile, signOut } = useAuth()
-  const [company, setCompany] = useState<Company | null>(null)
-
-  useEffect(() => {
-    if (profile?.company_id) getCompany(profile.company_id).then(setCompany)
-  }, [profile?.company_id])
+  const { groupLabel, isMultiBranch } = useCompanyGroup(profile?.company_id)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -29,10 +23,15 @@ export function CompanyLayout() {
             <span className="hidden sm:inline">Déconnexion</span>
           </button>
         </div>
-        {company && (
+        {groupLabel && (
           <div className="flex items-center gap-2 border-t border-brand-100 bg-brand-50 px-4 py-2.5 sm:px-8">
             <Building2 className="h-4 w-4 text-brand-600" />
-            <p className="text-sm font-bold text-brand-800">{company.name}</p>
+            <p className="text-sm font-bold text-brand-800">{groupLabel}</p>
+            {isMultiBranch && (
+              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700">
+                Toutes succursales
+              </span>
+            )}
           </div>
         )}
         <nav className="flex gap-1 px-4 sm:px-8">

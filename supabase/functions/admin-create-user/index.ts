@@ -8,12 +8,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+type Role = 'COMPANY_USER' | 'DRIVER' | 'AGENT' | 'SUPER_ADMIN'
+const ALLOWED_ROLES: Role[] = ['COMPANY_USER', 'DRIVER', 'AGENT', 'SUPER_ADMIN']
+
 interface CreateUserBody {
   email: string
   password: string
   name: string
   phone?: string
-  role: 'COMPANY_USER' | 'DRIVER' | 'AGENT'
+  role: Role
   company_id?: string
 }
 
@@ -95,6 +98,9 @@ Deno.serve(async (req) => {
 
   if (!email || !password || !name || !role) {
     return json({ error: 'Champs requis manquants (email, password, name, role)' }, 400)
+  }
+  if (!ALLOWED_ROLES.includes(role)) {
+    return json({ error: 'Rôle invalide' }, 400)
   }
   if (role === 'COMPANY_USER' && !company_id) {
     return json({ error: 'company_id requis pour un COMPANY_USER' }, 400)

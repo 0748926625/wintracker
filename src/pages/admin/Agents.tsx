@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, Building2, Trash2 } from 'lucide-react'
+import { Plus, Building2, Trash2, ShieldCheck } from 'lucide-react'
 import { listAgents, getAgentCompanies, setAgentCompanies } from '../../services/agents'
 import { listCompanies } from '../../services/companies'
 import { createUser, deleteUser } from '../../services/admin'
+import { listSuperAdmins, promoteToSuperAdmin } from '../../services/superAdmins'
+import { useAuth } from '../../hooks/useAuth'
 import type { Company, Profile } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Button } from '../../components/ui/Button'
@@ -12,13 +14,17 @@ import { Field, Input } from '../../components/ui/Field'
 export default function AdminAgents() {
   const [agents, setAgents] = useState<Profile[] | null>(null)
   const [agentCompanies, setAgentCompaniesMap] = useState<Record<string, Company[]>>({})
+  const [superAdmins, setSuperAdmins] = useState<Profile[] | null>(null)
   const [creating, setCreating] = useState(false)
+  const [creatingAdmin, setCreatingAdmin] = useState(false)
   const [assigning, setAssigning] = useState<Profile | null>(null)
-  const [deleting, setDeleting] = useState<Profile | null>(null)
+  const [promoting, setPromoting] = useState<Profile | null>(null)
+  const [deleting, setDeleting] = useState<{ profile: Profile; roleLabel: string } | null>(null)
 
   async function refresh() {
-    const list = await listAgents()
+    const [list, admins] = await Promise.all([listAgents(), listSuperAdmins()])
     setAgents(list)
+    setSuperAdmins(admins)
     const entries = await Promise.all(
       list.map(async (a) => [a.id, await getAgentCompanies(a.id)] as const),
     )
@@ -29,7 +35,7 @@ export default function AdminAgents() {
     refresh()
   }, [])
 
-  if (!agents) return <PageLoader />
+  if (!agents || !superAdmins) return <PageLoader />
 
   return (
     <div>
@@ -47,7 +53,7 @@ export default function AdminAgents() {
       </p>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Nom</th>
@@ -75,7 +81,13 @@ export default function AdminAgents() {
                       <Building2 className="h-4 w-4" /> Compagnies
                     </button>
                     <button
-                      onClick={() => setDeleting(a)}
+                      onClick={() => setPromoting(a)}
+                      className="flex items-center gap-1 text-sm font-medium text-amber-600 hover:underline"
+                    >
+                      <ShieldCheck className="h-4 w-4" /> Promouvoir
+                    </button>
+                    <button
+                      onClick={() => setDeleting({ profile: a, roleLabel: "l'agent Wintrack" })}
                       className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
                     >
                       <Trash2 className="h-4 w-4" /> Supprimer
@@ -95,11 +107,74 @@ export default function AdminAgents() {
         </table>
       </div>
 
+      <div className="mb-4 mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Super administrateurs</h2>
+          <p className="text-sm text-gray-500">
+            Accès complet à toutes les compagnies, colis, livreurs et finances.
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => setCreatingAdmin(true)}
+          className="w-full sm:w-auto"
+        >
+          <Plus className="h-4 w-4" /> Nouveau super administrateur
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[520px] text-left text-sm">
+          <thead className="bg-gray-50 text-gray-500">
+            <tr>
+              <th className="px-4 py-3 font-medium">Nom</th>
+              <th className="px-4 py-3 font-medium">Téléphone</th>
+              <th className="px-4 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {superAdmins.map((a) => (
+              <tr key={a.id}>
+                <td className="px-4 py-3 font-medium text-gray-900">{a.name}</td>
+                <td className="px-4 py-3 text-gray-600">{a.phone || '—'}</td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setDeleting({ profile: a, roleLabel: 'super administrateur' })}
+                      className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
+                    >
+                      <Trash2 className="h-4 w-4" /> Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {superAdmins.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-4 py-8 text-center text-gray-400">
+                  Aucun super administrateur pour le moment.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
       {creating && (
         <CreateAgentModal
           onClose={() => setCreating(false)}
           onSaved={async () => {
             setCreating(false)
+            await refresh()
+          }}
+        />
+      )}
+
+      {creatingAdmin && (
+        <CreateSuperAdminModal
+          onClose={() => setCreatingAdmin(false)}
+          onSaved={async () => {
+            setCreatingAdmin(false)
             await refresh()
           }}
         />
@@ -117,9 +192,21 @@ export default function AdminAgents() {
         />
       )}
 
+      {promoting && (
+        <PromoteModal
+          agent={promoting}
+          onClose={() => setPromoting(null)}
+          onPromoted={async () => {
+            setPromoting(null)
+            await refresh()
+          }}
+        />
+      )}
+
       {deleting && (
-        <DeleteAgentModal
-          agent={deleting}
+        <DeleteAccountModal
+          profile={deleting.profile}
+          roleLabel={deleting.roleLabel}
           onClose={() => setDeleting(null)}
           onDeleted={async () => {
             setDeleting(null)
@@ -131,23 +218,27 @@ export default function AdminAgents() {
   )
 }
 
-function DeleteAgentModal({
-  agent,
+function DeleteAccountModal({
+  profile,
+  roleLabel,
   onClose,
   onDeleted,
 }: {
-  agent: Profile
+  profile: Profile
+  roleLabel: string
   onClose: () => void
   onDeleted: () => void
 }) {
+  const { profile: me } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isSelf = me?.id === profile.id
 
   async function handleDelete() {
     setLoading(true)
     setError(null)
     try {
-      await deleteUser(agent.user_id)
+      await deleteUser(profile.user_id)
       onDeleted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -157,20 +248,134 @@ function DeleteAgentModal({
   }
 
   return (
-    <Modal title="Supprimer l'agent Wintrack" onClose={onClose}>
+    <Modal title={`Supprimer ${roleLabel}`} onClose={onClose}>
+      {isSelf ? (
+        <p className="mb-4 text-gray-600">
+          Vous ne pouvez pas supprimer votre propre compte.
+        </p>
+      ) : (
+        <p className="mb-4 text-gray-600">
+          Confirmez-vous la suppression définitive du compte de <strong>{profile.name}</strong> ? Il
+          ne pourra plus se connecter à l'application.
+        </p>
+      )}
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        {!isSelf && (
+          <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
+            Supprimer
+          </Button>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+function PromoteModal({
+  agent,
+  onClose,
+  onPromoted,
+}: {
+  agent: Profile
+  onClose: () => void
+  onPromoted: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handlePromote() {
+    setLoading(true)
+    setError(null)
+    try {
+      await promoteToSuperAdmin(agent.id)
+      onPromoted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Promouvoir en super administrateur" onClose={onClose}>
       <p className="mb-4 text-gray-600">
-        Confirmez-vous la suppression définitive du compte de <strong>{agent.name}</strong> ? Il ne
-        pourra plus se connecter à l'application.
+        <strong>{agent.name}</strong> obtiendra un accès complet à toutes les compagnies, colis,
+        livreurs et finances, et perdra son statut d'agent Wintrack (ses compagnies assignées seront
+        retirées). Cette action est irréversible depuis l'interface.
       </p>
       {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onClose}>
           Annuler
         </Button>
-        <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
-          Supprimer
+        <Button className="flex-1" loading={loading} onClick={handlePromote}>
+          Promouvoir
         </Button>
       </div>
+    </Modal>
+  )
+}
+
+function CreateSuperAdminModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await createUser({ email, password, name, phone, role: 'SUPER_ADMIN' })
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Nouveau super administrateur" onClose={onClose}>
+      <p className="mb-4 text-sm text-gray-500">
+        Ce compte aura un accès complet à toutes les compagnies, colis, livreurs et finances.
+      </p>
+      <form onSubmit={handleSubmit}>
+        <Field label="Nom complet">
+          <Input required value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Téléphone">
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </Field>
+        <Field label="Email">
+          <Input
+            type="email"
+            required
+            autoComplete="off"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label="Mot de passe temporaire">
+          <Input
+            type="text"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        <Button type="submit" loading={loading} className="w-full">
+          Créer le super administrateur
+        </Button>
+      </form>
     </Modal>
   )
 }

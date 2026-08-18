@@ -19,6 +19,24 @@ export async function getCompany(id: string): Promise<Company> {
   return data as unknown as Company
 }
 
+/**
+ * Compagnies "sœurs" partageant le même groupe qu'une compagnie donnée (ex: les
+ * différentes succursales d'une même compagnie), la compagnie elle-même incluse.
+ * Retourne uniquement cette compagnie si elle n'appartient à aucun groupe.
+ */
+export async function listGroupCompanies(companyId: string): Promise<Company[]> {
+  const company = await getCompany(companyId)
+  if (!company.group_id) return [company]
+
+  const { data, error } = await supabase
+    .from('companies')
+    .select(COMPANY_SELECT)
+    .eq('group_id', company.group_id)
+    .order('name')
+  if (error) throw error
+  return data as unknown as Company[]
+}
+
 export interface CompanyInput {
   name: string
   phone?: string

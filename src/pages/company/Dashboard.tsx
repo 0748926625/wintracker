@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useCompanyGroup } from '../../hooks/useCompanyGroup'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useMonthFilter } from '../../hooks/useMonthFilter'
-import { listCompanyPackages } from '../../services/packages'
-import { getCompany } from '../../services/companies'
+import { listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
-import type { Company, PackageStatus } from '../../types/database'
+import type { PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatCard } from '../../components/ui/StatCard'
@@ -24,22 +24,45 @@ const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
 
 export default function CompanyDashboard() {
   const { profile } = useAuth()
-  const fetcher = useCallback(() => listCompanyPackages(profile!.company_id!), [profile])
-  const { packages, loading } = useRealtimePackages(fetcher, 'company_id', profile?.company_id)
+  const { companyIds, companyById, isMultiBranch, loading: groupLoading } = useCompanyGroup(
+    profile?.company_id,
+  )
+  const fetcher = useCallback(
+    () =>
+      companyIds.length > 1
+        ? listCompaniesPackages(companyIds)
+        : listCompanyPackages(profile!.company_id!),
+    [profile, companyIds],
+  )
+  const { packages, loading } = useRealtimePackages(
+    fetcher,
+    isMultiBranch ? 'all' : 'company_id',
+    isMultiBranch ? 'all' : profile?.company_id,
+  )
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
+  const [selectedBranches, setSelectedBranches] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
-  const [company, setCompany] = useState<Company | null>(null)
   const mf = useMonthFilter()
 
-  useEffect(() => {
-    if (profile?.company_id) getCompany(profile.company_id).then(setCompany)
-  }, [profile?.company_id])
+  function toggleBranch(id: string) {
+    setSelectedBranches((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
-  if (loading) return <PageLoader />
+  if (groupLoading || loading) return <PageLoader />
 
-  const scoped = packages.filter((p) => mf.inRange(p.created_at))
+  const scoped = packages
+    .filter((p) => mf.inRange(p.created_at))
+    .filter((p) => selectedBranches.size === 0 || selectedBranches.has(p.company_id))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
-  const earnings = scoped.reduce((sum, p) => sum + (commissionForPackage(p, company) ?? 0), 0)
+  const earnings = scoped.reduce(
+    (sum, p) => sum + (commissionForPackage(p, companyById.get(p.company_id) ?? null) ?? 0),
+    0,
+  )
   const byStatus = filter === 'TOUS' ? scoped : scoped.filter((p) => p.status === filter)
   const query = search.trim().toLowerCase()
   const filtered = query
@@ -57,6 +80,34 @@ export default function CompanyDashboard() {
         <MonthSwitcher mf={mf} />
       </div>
       <p className="mb-6 text-gray-500">Vos colis</p>
+
+      {isMultiBranch && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedBranches(new Set())}
+            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium ${
+              selectedBranches.size === 0
+                ? 'border-brand-600 bg-brand-600 text-white'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            Toutes les succursales
+          </button>
+          {[...companyById.values()].map((c) => (
+            <button
+              key={c.id}
+              onClick={() => toggleBranch(c.id)}
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium ${
+                selectedBranches.has(c.id)
+                  ? 'border-brand-600 bg-brand-50 text-brand-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <StatCard label="Total" value={scoped.length} />
@@ -98,6 +149,7 @@ export default function CompanyDashboard() {
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">N° colis</th>
+              {isMultiBranch && <th className="px-4 py-3 font-medium">Succursale</th>}
               <th className="px-4 py-3 font-medium">Destinataire</th>
               <th className="px-4 py-3 font-medium">Adresse</th>
               <th className="px-4 py-3 font-medium">Prix</th>
@@ -118,12 +170,17 @@ export default function CompanyDashboard() {
                     <span className="text-xs text-gray-400">{p.tracking_number}</span>
                   )}
                 </td>
+                {isMultiBranch && (
+                  <td className="px-4 py-3 text-gray-600">
+                    {companyById.get(p.company_id)?.name || '—'}
+                  </td>
+                )}
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
                 <td className="px-4 py-3 text-gray-600">{p.delivery_address}</td>
                 <td className="px-4 py-3 text-gray-600">{p.price ? `${p.price} F` : '—'}</td>
                 <td className="px-4 py-3 text-gray-600">
                   {(() => {
-                    const commission = commissionForPackage(p, company)
+                    const commission = commissionForPackage(p, companyById.get(p.company_id) ?? null)
                     return commission != null ? `${commission} F` : '—'
                   })()}
                 </td>
@@ -138,7 +195,7 @@ export default function CompanyDashboard() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={isMultiBranch ? 9 : 8} className="px-4 py-8 text-center text-gray-400">
                   {query ? 'Aucun colis ne correspond à cette recherche.' : 'Aucun colis.'}
                 </td>
               </tr>

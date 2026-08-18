@@ -23,6 +23,17 @@ export async function listCompanyPackages(companyId: string): Promise<Package[]>
   return data as unknown as Package[]
 }
 
+/** Colis de plusieurs compagnies à la fois (ex: succursales d'un même groupe). */
+export async function listCompaniesPackages(companyIds: string[]): Promise<Package[]> {
+  const { data, error } = await supabase
+    .from('packages')
+    .select(PACKAGE_SELECT)
+    .in('company_id', companyIds)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as Package[]
+}
+
 export async function listDriverPackages(driverId: string): Promise<Package[]> {
   const { data, error } = await supabase
     .from('packages')

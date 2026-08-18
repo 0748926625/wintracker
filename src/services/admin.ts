@@ -6,7 +6,7 @@ export interface CreateUserInput {
   password: string
   name: string
   phone?: string
-  role: 'COMPANY_USER' | 'DRIVER' | 'AGENT'
+  role: 'COMPANY_USER' | 'DRIVER' | 'AGENT' | 'SUPER_ADMIN'
   company_id?: string
 }
 
