@@ -68,6 +68,7 @@ export interface Package {
   company_id: string
   driver_id: string | null
   agent_id: string | null
+  created_by: string | null
 
   sender_name: string | null
   sender_phone: string | null
@@ -88,6 +89,7 @@ export interface Package {
   company?: Company
   driver?: Driver
   agent?: GareAgent
+  creator?: Profile
 }
 
 export interface PackageEvent {

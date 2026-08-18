@@ -5,6 +5,7 @@ import { useRealtimePackage } from '../../hooks/useRealtimePackage'
 import { assignDriver } from '../../services/packages'
 import { listDrivers } from '../../services/drivers'
 import { commissionForPackage } from '../../lib/commission'
+import { creatorLabel } from '../../lib/packageCreator'
 import type { Driver } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -56,6 +57,7 @@ export default function AdminPackageDetail() {
           <Info label="Numéro de colis" value={pkg.external_reference} />
           <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
+          <Info label="Enregistré par" value={creatorLabel(pkg.creator)} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
           <Info

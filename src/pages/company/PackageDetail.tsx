@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useRealtimePackage } from '../../hooks/useRealtimePackage'
 import { commissionForPackage } from '../../lib/commission'
+import { creatorLabel } from '../../lib/packageCreator'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { PackageTimeline } from '../../components/PackageTimeline'
@@ -29,7 +30,9 @@ export default function CompanyPackageDetail() {
           <Info label="Numéro de colis" value={pkg.external_reference} />
           <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
+          <Info label="Enregistré par" value={creatorLabel(pkg.creator)} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
+          <Info label="Livreur" value={pkg.driver?.profile?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
           <Info
             label="Commission"
