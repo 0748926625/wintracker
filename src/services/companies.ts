@@ -64,6 +64,12 @@ export async function updateCompany(id: string, patch: Partial<CompanyInput>): P
   return data as Company
 }
 
+/** Assigne (ou retire, avec groupId = null) le groupe de plusieurs compagnies à la fois. */
+export async function updateCompaniesGroup(companyIds: string[], groupId: string | null): Promise<void> {
+  const { error } = await supabase.from('companies').update({ group_id: groupId }).in('id', companyIds)
+  if (error) throw error
+}
+
 export async function deleteCompany(id: string): Promise<void> {
   const { error } = await supabase.from('companies').delete().eq('id', id)
   if (error) {

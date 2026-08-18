@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserPlus, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, UserPlus, Trash2, AlertTriangle, Layers, Ungroup, X } from 'lucide-react'
 import {
   listCompanies,
   createCompany,
   updateCompany,
+  updateCompaniesGroup,
   deleteCompany,
   setCommissionTiers,
   getCommissionTiers,
@@ -49,6 +50,9 @@ export default function AdminCompanies() {
   const [userFor, setUserFor] = useState<Company | null>(null)
   const [deleting, setDeleting] = useState<Company | null>(null)
   const [deletingUser, setDeletingUser] = useState<Profile | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [grouping, setGrouping] = useState(false)
+  const [ungrouping, setUngrouping] = useState(false)
 
   async function refresh() {
     const list = await listCompanies()
@@ -63,7 +67,18 @@ export default function AdminCompanies() {
     refresh()
   }, [])
 
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   if (!companies) return <PageLoader />
+
+  const selectedCompanies = companies.filter((c) => selected.has(c.id))
 
   return (
     <div>
@@ -74,10 +89,47 @@ export default function AdminCompanies() {
         </Button>
       </div>
 
+      {selected.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3">
+          <span className="text-sm font-medium text-brand-800">
+            {selected.size} compagnie{selected.size > 1 ? 's' : ''} sélectionnée{selected.size > 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => setGrouping(true)}
+            className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline"
+          >
+            <Layers className="h-4 w-4" /> Grouper
+          </button>
+          <button
+            onClick={() => setUngrouping(true)}
+            className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline"
+          >
+            <Ungroup className="h-4 w-4" /> Retirer du groupe
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="ml-auto flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" /> Désélectionner
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  aria-label="Tout sélectionner"
+                  checked={companies.length > 0 && selected.size === companies.length}
+                  onChange={(e) =>
+                    setSelected(e.target.checked ? new Set(companies.map((c) => c.id)) : new Set())
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+              </th>
               <th className="px-4 py-3 font-medium">Nom</th>
               <th className="px-4 py-3 font-medium">Groupe</th>
               <th className="px-4 py-3 font-medium">Commission par colis</th>
@@ -87,7 +139,16 @@ export default function AdminCompanies() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {companies.map((c) => (
-              <tr key={c.id}>
+              <tr key={c.id} className={selected.has(c.id) ? 'bg-brand-50/40' : undefined}>
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Sélectionner ${c.name}`}
+                    checked={selected.has(c.id)}
+                    onChange={() => toggleSelect(c.id)}
+                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  />
+                </td>
                 <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
                 <td className="px-4 py-3 text-gray-600">{c.group?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{commissionPerPackage(c)}</td>
@@ -137,7 +198,7 @@ export default function AdminCompanies() {
             ))}
             {companies.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                   Aucune compagnie pour le moment.
                 </td>
               </tr>
@@ -190,6 +251,30 @@ export default function AdminCompanies() {
           }}
         />
       )}
+
+      {grouping && (
+        <GroupCompaniesModal
+          companies={selectedCompanies}
+          onClose={() => setGrouping(false)}
+          onGrouped={async () => {
+            setGrouping(false)
+            setSelected(new Set())
+            await refresh()
+          }}
+        />
+      )}
+
+      {ungrouping && (
+        <UngroupCompaniesModal
+          companies={selectedCompanies}
+          onClose={() => setUngrouping(false)}
+          onUngrouped={async () => {
+            setUngrouping(false)
+            setSelected(new Set())
+            await refresh()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -232,6 +317,134 @@ function DeleteCompanyUserModal({
         </Button>
         <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
           Supprimer
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
+function GroupCompaniesModal({
+  companies,
+  onClose,
+  onGrouped,
+}: {
+  companies: Company[]
+  onClose: () => void
+  onGrouped: () => void
+}) {
+  const [groups, setGroups] = useState<CompanyGroup[]>([])
+  const [groupId, setGroupId] = useState('')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    listCompanyGroups().then(setGroups)
+  }, [])
+
+  async function handleAddGroup() {
+    if (!newGroupName.trim()) return
+    const created = await createCompanyGroup(newGroupName.trim())
+    setGroups((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)))
+    setGroupId(created.id)
+    setNewGroupName('')
+  }
+
+  async function handleSubmit() {
+    if (!groupId) return
+    setLoading(true)
+    setError(null)
+    try {
+      await updateCompaniesGroup(companies.map((c) => c.id), groupId)
+      onGrouped()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Grouper les compagnies" onClose={onClose}>
+      <p className="mb-3 text-sm text-gray-500">
+        Ces compagnies partageront le même groupe (utile pour des succursales) :
+      </p>
+      <ul className="mb-4 space-y-1 text-sm font-medium text-gray-900">
+        {companies.map((c) => (
+          <li key={c.id}>• {c.name}</li>
+        ))}
+      </ul>
+      <Field label="Groupe">
+        <Select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+          <option value="">Sélectionner…</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </Select>
+        <div className="mt-2 flex gap-2">
+          <Input
+            placeholder="Nouveau groupe…"
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+          />
+          <Button type="button" variant="secondary" onClick={handleAddGroup} className="!px-3 !py-2 text-sm">
+            Ajouter
+          </Button>
+        </div>
+      </Field>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <Button onClick={handleSubmit} loading={loading} disabled={!groupId} className="w-full">
+        Grouper {companies.length} compagnie{companies.length > 1 ? 's' : ''}
+      </Button>
+    </Modal>
+  )
+}
+
+function UngroupCompaniesModal({
+  companies,
+  onClose,
+  onUngrouped,
+}: {
+  companies: Company[]
+  onClose: () => void
+  onUngrouped: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit() {
+    setLoading(true)
+    setError(null)
+    try {
+      await updateCompaniesGroup(companies.map((c) => c.id), null)
+      onUngrouped()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Retirer du groupe" onClose={onClose}>
+      <p className="mb-3 text-sm text-gray-500">
+        Ces compagnies ne partageront plus de groupe (les comptes compagnie associés ne verront plus
+        les succursales des unes des autres) :
+      </p>
+      <ul className="mb-4 space-y-1 text-sm font-medium text-gray-900">
+        {companies.map((c) => (
+          <li key={c.id}>• {c.name}</li>
+        ))}
+      </ul>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button variant="danger" className="flex-1" loading={loading} onClick={handleSubmit}>
+          Retirer du groupe
         </Button>
       </div>
     </Modal>
