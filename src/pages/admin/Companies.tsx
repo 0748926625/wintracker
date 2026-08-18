@@ -322,7 +322,7 @@ function DeleteCompanyModal({
           Continuer supprimera <strong>tout, définitivement</strong> — action irréversible.
         </p>
       </div>
-      <Field label={`Tapez "${FORCE_DELETE_PASSWORD}" pour confirmer`}>
+      <Field label="Mot de passe de confirmation">
         <Input
           type="password"
           autoComplete="off"
