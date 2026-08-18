@@ -13,6 +13,12 @@ export async function listAllPackages(): Promise<Package[]> {
   return data as unknown as Package[]
 }
 
+/** Supprime définitivement tous les colis d'une compagnie (et leur historique, en cascade). Irréversible. */
+export async function deleteCompanyPackages(companyId: string): Promise<void> {
+  const { error } = await supabase.from('packages').delete().eq('company_id', companyId)
+  if (error) throw error
+}
+
 export async function listCompanyPackages(companyId: string): Promise<Package[]> {
   const { data, error } = await supabase
     .from('packages')

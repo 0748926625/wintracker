@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserPlus, Trash2 } from 'lucide-react'
+import { Plus, UserPlus, Trash2, AlertTriangle } from 'lucide-react'
 import {
   listCompanies,
   createCompany,
@@ -10,6 +10,7 @@ import {
   listCompanyUsers,
   type CompanyInput,
 } from '../../services/companies'
+import { listCompanyPackages, deleteCompanyPackages } from '../../services/packages'
 import { listCompanyGroups, createCompanyGroup } from '../../services/groups'
 import { createUser, deleteUser } from '../../services/admin'
 import {
@@ -170,6 +171,7 @@ export default function AdminCompanies() {
       {deleting && (
         <DeleteCompanyModal
           company={deleting}
+          companyUsers={companyUsers[deleting.id] ?? []}
           onClose={() => setDeleting(null)}
           onDeleted={async () => {
             setDeleting(null)
@@ -236,22 +238,52 @@ function DeleteCompanyUserModal({
   )
 }
 
+const FORCE_DELETE_PASSWORD = 'Amouréternel!'
+
 function DeleteCompanyModal({
   company,
+  companyUsers,
   onClose,
   onDeleted,
 }: {
   company: Company
+  companyUsers: Profile[]
   onClose: () => void
   onDeleted: () => void
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [blocked, setBlocked] = useState(false)
+  const [packageCount, setPackageCount] = useState<number | null>(null)
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   async function handleDelete() {
     setLoading(true)
     setError(null)
     try {
+      await deleteCompany(company.id)
+      onDeleted()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur'
+      if (message.includes('colis ou des utilisateurs associés')) {
+        setBlocked(true)
+        listCompanyPackages(company.id).then((list) => setPackageCount(list.length))
+      } else {
+        setError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleForceDelete() {
+    setLoading(true)
+    setError(null)
+    try {
+      for (const user of companyUsers) {
+        await deleteUser(user.user_id)
+      }
+      await deleteCompanyPackages(company.id)
       await deleteCompany(company.id)
       onDeleted()
     } catch (err) {
@@ -261,18 +293,56 @@ function DeleteCompanyModal({
     }
   }
 
+  if (!blocked) {
+    return (
+      <Modal title="Supprimer la compagnie" onClose={onClose}>
+        <p className="mb-4 text-gray-600">
+          Confirmez-vous la suppression définitive de <strong>{company.name}</strong> ?
+        </p>
+        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
+            Supprimer
+          </Button>
+        </div>
+      </Modal>
+    )
+  }
+
   return (
-    <Modal title="Supprimer la compagnie" onClose={onClose}>
-      <p className="mb-4 text-gray-600">
-        Confirmez-vous la suppression définitive de <strong>{company.name}</strong> ?
-      </p>
+    <Modal title="Suppression forcée" onClose={onClose}>
+      <div className="mb-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
+        <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
+        <p className="text-sm text-red-700">
+          <strong>{company.name}</strong> a {packageCount ?? '…'} colis (avec tout leur historique)
+          {companyUsers.length > 0 && <> et {companyUsers.length} compte(s) utilisateur</>} liés.
+          Continuer supprimera <strong>tout, définitivement</strong> — action irréversible.
+        </p>
+      </div>
+      <Field label={`Tapez "${FORCE_DELETE_PASSWORD}" pour confirmer`}>
+        <Input
+          type="password"
+          autoComplete="off"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+      </Field>
       {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onClose}>
           Annuler
         </Button>
-        <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
-          Supprimer
+        <Button
+          variant="danger"
+          className="flex-1"
+          loading={loading}
+          disabled={confirmPassword !== FORCE_DELETE_PASSWORD}
+          onClick={handleForceDelete}
+        >
+          Tout supprimer
         </Button>
       </div>
     </Modal>
