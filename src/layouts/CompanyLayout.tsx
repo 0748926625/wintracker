@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { LogOut, Building2, Package, Wallet } from 'lucide-react'
+import { LogOut, Building2, Package, Wallet, KeyRound } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useCompanyGroup } from '../hooks/useCompanyGroup'
+import { ChangePasswordModal } from '../components/ChangePasswordModal'
 
 export function CompanyLayout() {
   const { profile, signOut } = useAuth()
   const { groupLabel, isMultiBranch } = useCompanyGroup(profile?.company_id)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -15,13 +18,22 @@ export function CompanyLayout() {
             <span className="text-xl font-extrabold tracking-tight text-brand-600">WINTRACKER</span>
             <p className="text-xs text-gray-400">Powered by Winner Express</p>
           </div>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="hidden sm:inline">Déconnexion</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setChangingPassword(true)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              <KeyRound className="h-5 w-5" />
+              <span className="hidden sm:inline">Mot de passe</span>
+            </button>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
+          </div>
         </div>
         {groupLabel && (
           <div className="flex items-center gap-2 border-t border-brand-100 bg-brand-50 px-4 py-2.5 sm:px-8">
@@ -61,6 +73,8 @@ export function CompanyLayout() {
       <main className="mx-auto max-w-4xl p-4 sm:p-8">
         <Outlet />
       </main>
+
+      {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
     </div>
   )
 }

@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, LogOut, Repeat } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, LogOut, Repeat, KeyRound } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useGare } from '../hooks/useGare'
+import { ChangePasswordModal } from '../components/ChangePasswordModal'
 
 interface NavLinkItem {
   to: string
@@ -30,6 +32,7 @@ export function AdminLayout() {
   const { profile, signOut } = useAuth()
   const { activeCompany, canSwitch, changeGare } = useGare()
   const links = profile?.role === 'SUPER_ADMIN' ? [...baseLinks, ...superAdminLinks] : baseLinks
+  const [changingPassword, setChangingPassword] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -69,6 +72,12 @@ export function AdminLayout() {
         <div className="border-t border-gray-200 pt-4">
           <p className="mb-2 truncate text-sm font-medium text-gray-700">{profile?.name}</p>
           <button
+            onClick={() => setChangingPassword(true)}
+            className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+          >
+            <KeyRound className="h-4 w-4" /> Mot de passe
+          </button>
+          <button
             onClick={signOut}
             className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-red-600"
           >
@@ -91,9 +100,18 @@ export function AdminLayout() {
               </button>
             )}
           </div>
-          <button onClick={signOut} className="text-gray-500 hover:text-red-600">
-            <LogOut className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setChangingPassword(true)}
+              aria-label="Changer le mot de passe"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <KeyRound className="h-5 w-5" />
+            </button>
+            <button onClick={signOut} aria-label="Déconnexion" className="text-gray-500 hover:text-red-600">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
@@ -124,6 +142,8 @@ export function AdminLayout() {
           ))}
         </nav>
       </div>
+
+      {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
     </div>
   )
 }
