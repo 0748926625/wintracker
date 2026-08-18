@@ -7,6 +7,8 @@ import { useGare } from '../hooks/useGare'
 interface NavLinkItem {
   to: string
   label: string
+  /** Libellé compact pour la barre du bas mobile, où l'espace est limité (7 onglets côté Super Admin). */
+  shortLabel?: string
   icon: LucideIcon
   end?: boolean
 }
@@ -19,8 +21,8 @@ const baseLinks: NavLinkItem[] = [
 const superAdminLinks: NavLinkItem[] = [
   { to: '/admin/companies', label: 'Compagnies', icon: Building2 },
   { to: '/admin/drivers', label: 'Livreurs', icon: Truck },
-  { to: '/admin/agents', label: 'Agents Wintrack', icon: Users },
-  { to: '/admin/gare-agents', label: 'Agents de gare', icon: IdCard },
+  { to: '/admin/agents', label: 'Agents Wintrack', shortLabel: 'Wintrack', icon: Users },
+  { to: '/admin/gare-agents', label: 'Agents de gare', shortLabel: 'Gare', icon: IdCard },
   { to: '/admin/finance', label: 'Finances', icon: Wallet },
 ]
 
@@ -105,19 +107,19 @@ export function AdminLayout() {
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 flex border-t border-gray-200 bg-white md:hidden">
-          {links.map(({ to, label, icon: Icon, end }) => (
+          {links.map(({ to, label, shortLabel, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium whitespace-nowrap ${
                   isActive ? 'text-brand-600' : 'text-gray-500'
                 }`
               }
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {shortLabel ?? label}
             </NavLink>
           ))}
         </nav>
