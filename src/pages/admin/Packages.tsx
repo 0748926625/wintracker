@@ -145,9 +145,6 @@ export default function AdminPackages() {
                   <Link to={`/admin/packages/${p.id}`} className="block font-medium text-brand-600">
                     {p.external_reference || p.tracking_number}
                   </Link>
-                  {p.external_reference && (
-                    <span className="text-xs text-gray-400">{p.tracking_number}</span>
-                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.company?.name}</td>
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
@@ -304,9 +301,8 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
           </Select>
         </Field>
 
-        <Field label="Référence interne compagnie (facultatif)">
+        <Field label="Numéro de colis (facultatif)">
           <Input
-            placeholder="ex: numéro de colis"
             value={form.external_reference}
             onChange={(e) => setForm({ ...form, external_reference: e.target.value })}
           />

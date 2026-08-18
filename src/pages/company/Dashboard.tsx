@@ -166,9 +166,6 @@ export default function CompanyDashboard() {
                   <Link to={`/company/packages/${p.id}`} className="block font-medium text-brand-600">
                     {p.external_reference || p.tracking_number}
                   </Link>
-                  {p.external_reference && (
-                    <span className="text-xs text-gray-400">{p.tracking_number}</span>
-                  )}
                 </td>
                 {isMultiBranch && (
                   <td className="px-4 py-3 text-gray-600">

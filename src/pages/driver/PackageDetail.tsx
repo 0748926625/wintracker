@@ -20,7 +20,9 @@ export default function DriverPackageDetail() {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900">{pkg.tracking_number}</h1>
+          <h1 className="text-lg font-bold text-gray-900">
+            {pkg.external_reference || pkg.tracking_number}
+          </h1>
           <StatusBadge status={pkg.status} />
         </div>
 

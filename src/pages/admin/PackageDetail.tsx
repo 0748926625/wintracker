@@ -44,7 +44,9 @@ export default function AdminPackageDetail() {
         <div className="mb-4 flex items-start justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">WINTRACKER</p>
-            <h1 className="text-xl font-bold text-gray-900">{pkg.tracking_number}</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              {pkg.external_reference || pkg.tracking_number}
+            </h1>
           </div>
           <StatusBadge status={pkg.status} />
         </div>
@@ -52,6 +54,7 @@ export default function AdminPackageDetail() {
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <Info label="Compagnie" value={pkg.company?.name} />
           <Info label="Numéro de colis" value={pkg.external_reference} />
+          <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />

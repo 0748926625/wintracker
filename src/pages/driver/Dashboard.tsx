@@ -55,7 +55,7 @@ export default function DriverDashboard() {
         {active.map((p) => (
           <div key={p.id} className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-bold text-gray-900">{p.tracking_number}</span>
+              <span className="font-bold text-gray-900">{p.external_reference || p.tracking_number}</span>
               <StatusBadge status={p.status} />
             </div>
             <p className="font-medium text-gray-900">{p.recipient_name}</p>

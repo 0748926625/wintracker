@@ -16,3 +16,9 @@ export async function createGareAgent(input: { name: string; phone?: string }): 
   if (error) throw error
   return data as GareAgent
 }
+
+/** Les colis déjà associés à cet agent conservent leur historique (agent_id passe à null). */
+export async function deleteGareAgent(id: string): Promise<void> {
+  const { error } = await supabase.from('gare_agents').delete().eq('id', id)
+  if (error) throw error
+}

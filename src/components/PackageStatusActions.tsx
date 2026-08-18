@@ -97,7 +97,7 @@ export function PackageStatusActions({
       {confirmingPickup && (
         <Modal title="Confirmer la récupération" onClose={() => setConfirmingPickup(false)}>
           <p className="mb-4 text-gray-600">
-            Confirmez-vous avoir récupéré le colis {pkg.tracking_number} ?
+            Confirmez-vous avoir récupéré le colis {pkg.external_reference || pkg.tracking_number} ?
           </p>
           <div className="flex gap-3">
             <Button variant="secondary" className="flex-1" onClick={() => setConfirmingPickup(false)}>

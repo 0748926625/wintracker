@@ -14,6 +14,7 @@ import AdminDrivers from './pages/admin/Drivers'
 import AdminPackages from './pages/admin/Packages'
 import AdminPackageDetail from './pages/admin/PackageDetail'
 import AdminAgents from './pages/admin/Agents'
+import AdminGareAgents from './pages/admin/GareAgents'
 import AdminFinance from './pages/admin/Finance'
 import CompanyDashboard from './pages/company/Dashboard'
 import CompanyPackageDetail from './pages/company/PackageDetail'
@@ -70,6 +71,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                   <AdminAgents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="gare-agents"
+              element={
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <AdminGareAgents />
                 </ProtectedRoute>
               }
             />
