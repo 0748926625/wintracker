@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useRealtimePackage } from '../../hooks/useRealtimePackage'
 import { assignDriver } from '../../services/packages'
 import { listDrivers } from '../../services/drivers'
+import { commissionForPackage } from '../../lib/commission'
 import type { Driver } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -54,6 +55,13 @@ export default function AdminPackageDetail() {
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
+          <Info
+            label="Commission"
+            value={(() => {
+              const commission = commissionForPackage(pkg, pkg.company ?? null)
+              return commission != null ? `${commission} F` : null
+            })()}
+          />
           <Info label="Destinataire" value={pkg.recipient_name} />
           <Info label="Téléphone" value={pkg.recipient_phone} />
           <Info label="Adresse" value={pkg.delivery_address} />

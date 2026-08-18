@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { Package, PackageEvent, PackageStatus } from '../types/database'
 import { getCurrentLocation, type GeoPoint } from '../lib/geolocation'
 
-const PACKAGE_SELECT = `*, company:companies(*), driver:drivers(*, profile:profiles(*)), agent:gare_agents(*)`
+const PACKAGE_SELECT = `*, company:companies(*, commission_tiers:company_commission_tiers(*)), driver:drivers(*, profile:profiles(*)), agent:gare_agents(*)`
 
 export async function listAllPackages(): Promise<Package[]> {
   const { data, error } = await supabase

@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useRealtimePackage } from '../../hooks/useRealtimePackage'
+import { commissionForPackage } from '../../lib/commission'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { PackageTimeline } from '../../components/PackageTimeline'
@@ -25,10 +26,21 @@ export default function CompanyPackageDetail() {
           <Info label="Compagnie" value={pkg.company?.name} />
           <Info label="Numéro de colis" value={pkg.external_reference} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
+          <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
+          <Info
+            label="Commission"
+            value={(() => {
+              const commission = commissionForPackage(pkg, pkg.company ?? null)
+              return commission != null ? `${commission} F` : null
+            })()}
+          />
           <Info label="Destinataire" value={pkg.recipient_name} />
           <Info label="Téléphone" value={pkg.recipient_phone} />
           <Info label="Adresse" value={pkg.delivery_address} />
+          <Info label="Expéditeur" value={pkg.sender_name} />
+          <Info label="Tél. expéditeur" value={pkg.sender_phone} />
+          {pkg.description && <Info label="Description" value={pkg.description} />}
         </dl>
 
         <div className="mt-5 border-t border-gray-100 pt-4">
