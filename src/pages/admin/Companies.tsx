@@ -12,7 +12,7 @@ import {
   type CompanyInput,
 } from '../../services/companies'
 import { listCompanyPackages, deleteCompanyPackages } from '../../services/packages'
-import { listCompanyGroups, createCompanyGroup } from '../../services/groups'
+import { listCompanyGroups, createCompanyGroup, deleteCompanyGroup } from '../../services/groups'
 import { createUser, deleteUser } from '../../services/admin'
 import {
   COMMISSION_TYPE_LABELS,
@@ -46,17 +46,20 @@ function commissionPerPackage(c: Company): string {
 export default function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[] | null>(null)
   const [companyUsers, setCompanyUsers] = useState<Record<string, Profile[]>>({})
+  const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [editing, setEditing] = useState<Company | 'new' | null>(null)
   const [userFor, setUserFor] = useState<Company | null>(null)
   const [deleting, setDeleting] = useState<Company | null>(null)
   const [deletingUser, setDeletingUser] = useState<Profile | null>(null)
+  const [deletingGroup, setDeletingGroup] = useState<CompanyGroup | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [grouping, setGrouping] = useState(false)
   const [ungrouping, setUngrouping] = useState(false)
 
   async function refresh() {
-    const list = await listCompanies()
+    const [list, groupList] = await Promise.all([listCompanies(), listCompanyGroups()])
     setCompanies(list)
+    setGroups(groupList)
     const entries = await Promise.all(
       list.map(async (c) => [c.id, await listCompanyUsers(c.id)] as const),
     )
@@ -88,6 +91,35 @@ export default function AdminCompanies() {
           <Plus className="h-4 w-4" /> Nouvelle compagnie
         </Button>
       </div>
+
+      {groups.length > 0 && (
+        <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+          <p className="border-b border-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700">
+            Groupes
+          </p>
+          <ul className="divide-y divide-gray-100">
+            {groups.map((g) => {
+              const count = companies.filter((c) => c.group_id === g.id).length
+              return (
+                <li key={g.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <span className="font-medium text-gray-900">
+                    {g.name}{' '}
+                    <span className="font-normal text-gray-400">
+                      ({count} compagnie{count > 1 ? 's' : ''})
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => setDeletingGroup(g)}
+                    className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
+                  >
+                    <Trash2 className="h-4 w-4" /> Supprimer
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {selected.size > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3">
@@ -252,6 +284,18 @@ export default function AdminCompanies() {
         />
       )}
 
+      {deletingGroup && (
+        <DeleteGroupModal
+          group={deletingGroup}
+          companyCount={companies.filter((c) => c.group_id === deletingGroup.id).length}
+          onClose={() => setDeletingGroup(null)}
+          onDeleted={async () => {
+            setDeletingGroup(null)
+            await refresh()
+          }}
+        />
+      )}
+
       {grouping && (
         <GroupCompaniesModal
           companies={selectedCompanies}
@@ -309,6 +353,58 @@ function DeleteCompanyUserModal({
       <p className="mb-4 text-gray-600">
         Confirmez-vous la suppression définitive du compte de <strong>{user.name}</strong> ? Il ne
         pourra plus se connecter à l'application.
+      </p>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
+          Supprimer
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
+function DeleteGroupModal({
+  group,
+  companyCount,
+  onClose,
+  onDeleted,
+}: {
+  group: CompanyGroup
+  companyCount: number
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    setLoading(true)
+    setError(null)
+    try {
+      await deleteCompanyGroup(group.id)
+      onDeleted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Supprimer le groupe" onClose={onClose}>
+      <p className="mb-4 text-gray-600">
+        Confirmez-vous la suppression du groupe <strong>{group.name}</strong> ?
+        {companyCount > 0 && (
+          <>
+            {' '}
+            Les {companyCount} compagnie{companyCount > 1 ? 's' : ''} qu'il contient ne seront pas
+            supprimées, juste détachées du groupe.
+          </>
+        )}
       </p>
       {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
       <div className="flex gap-3">
