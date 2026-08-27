@@ -13,6 +13,7 @@ import AdminCompanies from './pages/admin/Companies'
 import AdminDrivers from './pages/admin/Drivers'
 import AdminPackages from './pages/admin/Packages'
 import AdminPackageDetail from './pages/admin/PackageDetail'
+import AdminTrash from './pages/admin/Trash'
 import AdminAgents from './pages/admin/Agents'
 import AdminGareAgents from './pages/admin/GareAgents'
 import AdminFinance from './pages/admin/Finance'
@@ -50,6 +51,7 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="packages" element={<AdminPackages />} />
             <Route path="packages/:id" element={<AdminPackageDetail />} />
+            <Route path="trash" element={<AdminTrash />} />
             <Route
               path="companies"
               element={

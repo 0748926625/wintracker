@@ -8,7 +8,31 @@ export async function listAllPackages(): Promise<Package[]> {
   const { data, error } = await supabase
     .from('packages')
     .select(PACKAGE_SELECT)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as Package[]
+}
+
+/** Colis à la corbeille (toutes compagnies) — Super Admin uniquement. */
+export async function listDeletedPackages(): Promise<Package[]> {
+  const { data, error } = await supabase
+    .from('packages')
+    .select(PACKAGE_SELECT)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as Package[]
+}
+
+/** Colis à la corbeille d'une compagnie. */
+export async function listCompanyDeletedPackages(companyId: string): Promise<Package[]> {
+  const { data, error } = await supabase
+    .from('packages')
+    .select(PACKAGE_SELECT)
+    .eq('company_id', companyId)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
   if (error) throw error
   return data as unknown as Package[]
 }
@@ -19,8 +43,23 @@ export async function deleteCompanyPackages(companyId: string): Promise<void> {
   if (error) throw error
 }
 
-/** Supprime définitivement un colis (et son historique, en cascade). Irréversible. */
-export async function deletePackage(id: string): Promise<void> {
+/** Déplace un colis vers la corbeille. Récupérable via restorePackage. */
+export async function softDeletePackage(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('packages')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** Retire un colis de la corbeille. */
+export async function restorePackage(id: string): Promise<void> {
+  const { error } = await supabase.from('packages').update({ deleted_at: null }).eq('id', id)
+  if (error) throw error
+}
+
+/** Supprime définitivement un colis de la corbeille (et son historique, en cascade). Irréversible. */
+export async function purgePackage(id: string): Promise<void> {
   const { error } = await supabase.from('packages').delete().eq('id', id)
   if (error) throw error
 }
@@ -30,6 +69,7 @@ export async function listCompanyPackages(companyId: string): Promise<Package[]>
     .from('packages')
     .select(PACKAGE_SELECT)
     .eq('company_id', companyId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data as unknown as Package[]
@@ -41,6 +81,7 @@ export async function listCompaniesPackages(companyIds: string[]): Promise<Packa
     .from('packages')
     .select(PACKAGE_SELECT)
     .in('company_id', companyIds)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data as unknown as Package[]
@@ -50,6 +91,7 @@ export async function listDriverPackages(driverId: string): Promise<Package[]> {
   const { data, error } = await supabase
     .from('packages')
     .select(PACKAGE_SELECT)
+    .is('deleted_at', null)
     .eq('driver_id', driverId)
     .order('created_at', { ascending: false })
   if (error) throw error

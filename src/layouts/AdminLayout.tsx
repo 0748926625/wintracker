@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, LogOut, Repeat, KeyRound } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, LogOut, Repeat, KeyRound, Trash2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useGare } from '../hooks/useGare'
 import { ChangePasswordModal } from '../components/ChangePasswordModal'
@@ -20,6 +20,8 @@ const baseLinks: NavLinkItem[] = [
   { to: '/admin/packages', label: 'Colis', icon: Package },
 ]
 
+const trashLink: NavLinkItem = { to: '/admin/trash', label: 'Corbeille', icon: Trash2 }
+
 const superAdminLinks: NavLinkItem[] = [
   { to: '/admin/companies', label: 'Compagnies', icon: Building2 },
   { to: '/admin/drivers', label: 'Livreurs', icon: Truck },
@@ -31,7 +33,13 @@ const superAdminLinks: NavLinkItem[] = [
 export function AdminLayout() {
   const { profile, signOut } = useAuth()
   const { activeCompany, canSwitch, changeGare } = useGare()
-  const links = profile?.role === 'SUPER_ADMIN' ? [...baseLinks, ...superAdminLinks] : baseLinks
+  const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
+  const canAccessTrash = isSuperAdmin || profile?.can_delete_packages === true
+  const links = [
+    ...baseLinks,
+    ...(canAccessTrash ? [trashLink] : []),
+    ...(isSuperAdmin ? superAdminLinks : []),
+  ]
   const [changingPassword, setChangingPassword] = useState(false)
 
   return (

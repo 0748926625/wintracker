@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, RotateCcw } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
 import { useRealtimePackage } from '../../hooks/useRealtimePackage'
 import {
   assignDriver,
   updatePackage,
-  deletePackage,
+  softDeletePackage,
+  restorePackage,
+  purgePackage,
   type CreatePackageInput,
 } from '../../services/packages'
 import { listDrivers } from '../../services/drivers'
@@ -33,14 +35,19 @@ export default function AdminPackageDetail() {
   const [assigning, setAssigning] = useState(false)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [purging, setPurging] = useState(false)
+  const [restoring, setRestoring] = useState(false)
 
-  const canDelete = profile?.role === 'SUPER_ADMIN' || profile?.can_delete_packages === true
+  const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
+  const canDelete = isSuperAdmin || profile?.can_delete_packages === true
 
   useEffect(() => {
     listDrivers().then((all) => setDrivers(all.filter((d) => d.status === 'ACTIVE')))
   }, [])
 
   if (loading || !pkg) return <PageLoader />
+
+  const isTrashed = pkg.deleted_at != null
 
   async function handleAssign(driverId: string) {
     setAssigning(true)
@@ -52,11 +59,27 @@ export default function AdminPackageDetail() {
     }
   }
 
+  async function handleRestore() {
+    setRestoring(true)
+    try {
+      await restorePackage(pkg!.id)
+      await refresh()
+    } finally {
+      setRestoring(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <Link to="/admin/packages" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500">
         <ArrowLeft className="h-4 w-4" /> Retour
       </Link>
+
+      {isTrashed && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          Ce colis est à la corbeille depuis le {new Date(pkg.deleted_at!).toLocaleDateString('fr-FR')}.
+        </div>
+      )}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-4 flex items-start justify-between">
@@ -68,18 +91,37 @@ export default function AdminPackageDetail() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={pkg.status} />
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-            >
-              <Pencil className="h-3.5 w-3.5" /> Modifier
-            </button>
-            {canDelete && (
+            {!isTrashed && (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Modifier
+              </button>
+            )}
+            {!isTrashed && canDelete && (
               <button
                 onClick={() => setDeleting(true)}
                 className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Supprimer
+              </button>
+            )}
+            {isTrashed && canDelete && (
+              <button
+                onClick={handleRestore}
+                disabled={restoring}
+                className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Restaurer
+              </button>
+            )}
+            {isTrashed && isSuperAdmin && (
+              <button
+                onClick={() => setPurging(true)}
+                className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Supprimer définitivement
               </button>
             )}
           </div>
@@ -155,6 +197,14 @@ export default function AdminPackageDetail() {
           onDeleted={() => navigate('/admin/packages')}
         />
       )}
+
+      {purging && (
+        <PurgePackageModal
+          pkg={pkg}
+          onClose={() => setPurging(false)}
+          onPurged={() => navigate('/admin/trash')}
+        />
+      )}
     </div>
   )
 }
@@ -175,7 +225,7 @@ function DeletePackageModal({
     setLoading(true)
     setError(null)
     try {
-      await deletePackage(pkg.id)
+      await softDeletePackage(pkg.id)
       onDeleted()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
@@ -186,9 +236,9 @@ function DeletePackageModal({
   return (
     <Modal title="Supprimer ce colis" onClose={onClose}>
       <p className="mb-4 text-gray-600">
-        Confirmez-vous la suppression définitive du colis{' '}
-        <strong>{pkg.external_reference || pkg.tracking_number}</strong> ? Son historique sera
-        également supprimé. Cette action est irréversible.
+        Confirmez-vous la suppression du colis{' '}
+        <strong>{pkg.external_reference || pkg.tracking_number}</strong> ? Il sera déplacé vers la
+        corbeille et pourra être restauré à tout moment.
       </p>
       {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
       <div className="flex gap-3">
@@ -197,6 +247,50 @@ function DeletePackageModal({
         </Button>
         <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
           Supprimer
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
+function PurgePackageModal({
+  pkg,
+  onClose,
+  onPurged,
+}: {
+  pkg: Package
+  onClose: () => void
+  onPurged: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handlePurge() {
+    setLoading(true)
+    setError(null)
+    try {
+      await purgePackage(pkg.id)
+      onPurged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Supprimer définitivement ce colis" onClose={onClose}>
+      <p className="mb-4 text-gray-600">
+        Confirmez-vous la suppression définitive du colis{' '}
+        <strong>{pkg.external_reference || pkg.tracking_number}</strong> ? Son historique sera
+        également supprimé. Cette action est irréversible et ne pourra pas être annulée.
+      </p>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button variant="danger" className="flex-1" loading={loading} onClick={handlePurge}>
+          Supprimer définitivement
         </Button>
       </div>
     </Modal>

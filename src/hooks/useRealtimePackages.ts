@@ -5,6 +5,8 @@ import { getPackage } from '../services/packages'
 import type { Package } from '../types/database'
 
 type FilterColumn = 'company_id' | 'driver_id' | 'all'
+/** 'active' exclut les colis à la corbeille, 'trash' n'affiche que ceux-ci. */
+type Mode = 'active' | 'trash'
 
 /**
  * Charge la liste des colis puis reste synchronisé en temps réel via Supabase Realtime.
@@ -14,6 +16,7 @@ export function useRealtimePackages(
   fetcher: () => Promise<Package[]>,
   filterColumn: FilterColumn,
   filterValue: string | null | undefined,
+  mode: Mode = 'active',
 ) {
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,7 +34,9 @@ export function useRealtimePackages(
       if (!id) return
       try {
         const fresh = await getPackage(id)
+        const belongs = mode === 'trash' ? fresh.deleted_at != null : fresh.deleted_at == null
         setPackages((prev) => {
+          if (!belongs) return prev.filter((p) => p.id !== id)
           const exists = prev.some((p) => p.id === id)
           if (exists) return prev.map((p) => (p.id === id ? fresh : p))
           return [fresh, ...prev]
@@ -41,7 +46,7 @@ export function useRealtimePackages(
         setPackages((prev) => prev.filter((p) => p.id !== id))
       }
     },
-    [],
+    [mode],
   )
 
   useEffect(() => {
