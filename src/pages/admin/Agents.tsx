@@ -268,7 +268,7 @@ function DeletePermissionToggle({
         className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
       />
       <span className="text-sm text-gray-600">
-        {agent.can_delete_packages ? 'Oui' : 'Non'}
+        {agent.can_delete_packages ? 'Autorisé' : 'Non autorisé'}
       </span>
     </label>
   )
