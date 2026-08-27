@@ -49,6 +49,7 @@ export interface Profile {
   role: UserRole
   name: string
   phone: string | null
+  can_delete_packages: boolean
   created_at: string
 }
 

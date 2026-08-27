@@ -20,6 +20,17 @@ export async function getAgentCompanies(agentProfileId: string): Promise<Company
   return (data as unknown as { company: Company }[]).map((row) => row.company)
 }
 
+export async function setAgentCanDeletePackages(
+  agentProfileId: string,
+  canDelete: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ can_delete_packages: canDelete })
+    .eq('id', agentProfileId)
+  if (error) throw error
+}
+
 export async function setAgentCompanies(agentProfileId: string, companyIds: string[]): Promise<void> {
   const { error: deleteError } = await supabase
     .from('agent_companies')

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Plus, Building2, Trash2, ShieldCheck } from 'lucide-react'
-import { listAgents, getAgentCompanies, setAgentCompanies } from '../../services/agents'
+import {
+  listAgents,
+  getAgentCompanies,
+  setAgentCompanies,
+  setAgentCanDeletePackages,
+} from '../../services/agents'
 import { listCompanies } from '../../services/companies'
 import { createUser, deleteUser } from '../../services/admin'
 import { listSuperAdmins, promoteToSuperAdmin } from '../../services/superAdmins'
@@ -59,6 +64,7 @@ export default function AdminAgents() {
               <th className="px-4 py-3 font-medium">Nom</th>
               <th className="px-4 py-3 font-medium">Téléphone</th>
               <th className="px-4 py-3 font-medium">Compagnies assignées</th>
+              <th className="px-4 py-3 font-medium">Peut supprimer un colis</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
@@ -71,6 +77,20 @@ export default function AdminAgents() {
                   {agentCompanies[a.id]?.length
                     ? agentCompanies[a.id].map((c) => c.name).join(', ')
                     : '— aucune —'}
+                </td>
+                <td className="px-4 py-3">
+                  <DeletePermissionToggle
+                    agent={a}
+                    onChanged={(canDelete) =>
+                      setAgents((prev) =>
+                        prev
+                          ? prev.map((p) =>
+                              p.id === a.id ? { ...p, can_delete_packages: canDelete } : p,
+                            )
+                          : prev,
+                      )
+                    }
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-3">
@@ -98,7 +118,7 @@ export default function AdminAgents() {
             ))}
             {agents.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
                   Aucun agent Wintrack pour le moment.
                 </td>
               </tr>
@@ -215,6 +235,42 @@ export default function AdminAgents() {
         />
       )}
     </div>
+  )
+}
+
+function DeletePermissionToggle({
+  agent,
+  onChanged,
+}: {
+  agent: Profile
+  onChanged: (canDelete: boolean) => void
+}) {
+  const [loading, setLoading] = useState(false)
+
+  async function handleToggle() {
+    const next = !agent.can_delete_packages
+    setLoading(true)
+    try {
+      await setAgentCanDeletePackages(agent.id, next)
+      onChanged(next)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <label className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={agent.can_delete_packages}
+        disabled={loading}
+        onChange={handleToggle}
+        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+      />
+      <span className="text-sm text-gray-600">
+        {agent.can_delete_packages ? 'Oui' : 'Non'}
+      </span>
+    </label>
   )
 }
 

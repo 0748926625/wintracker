@@ -19,6 +19,12 @@ export async function deleteCompanyPackages(companyId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Supprime définitivement un colis (et son historique, en cascade). Irréversible. */
+export async function deletePackage(id: string): Promise<void> {
+  const { error } = await supabase.from('packages').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function listCompanyPackages(companyId: string): Promise<Package[]> {
   const { data, error } = await supabase
     .from('packages')
