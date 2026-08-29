@@ -96,26 +96,60 @@ export default function AdminDrivers() {
   )
 }
 
+function emailFromPhone(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  return `${digits}@wintracker.local`
+}
+
 function CreateDriverModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ email: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+    const digits = phone.replace(/\D/g, '')
+    if (!digits) {
+      setError('Numéro de téléphone invalide.')
+      return
+    }
+    setLoading(true)
     try {
+      const email = emailFromPhone(phone)
       await createUser({ email, password, name, phone, role: 'DRIVER' })
-      onSaved()
+      setCreated({ email })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (created) {
+    return (
+      <Modal title="Livreur créé" onClose={onSaved}>
+        <p className="mb-4 text-gray-600">
+          Communiquez ces identifiants de connexion au livreur :
+        </p>
+        <div className="mb-4 space-y-2 rounded-xl bg-gray-50 p-3 text-sm">
+          <p>
+            <span className="text-gray-500">Email : </span>
+            <span className="font-medium text-gray-900">{created.email}</span>
+          </p>
+          <p>
+            <span className="text-gray-500">Mot de passe : </span>
+            <span className="font-medium text-gray-900">{password}</span>
+          </p>
+        </div>
+        <Button className="w-full" onClick={onSaved}>
+          Terminer
+        </Button>
+      </Modal>
+    )
   }
 
   return (
@@ -125,15 +159,11 @@ function CreateDriverModal({ onClose, onSaved }: { onClose: () => void; onSaved:
           <Input required value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label="Téléphone">
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </Field>
-        <Field label="Email">
           <Input
-            type="email"
             required
-            autoComplete="off"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Sert d'identifiant de connexion"
           />
         </Field>
         <Field label="Mot de passe temporaire">
