@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Expense, ExpenseCategory } from '../types/database'
+import type { Expense, ExpenseCategory, ExpenseRecurrence } from '../types/database'
 
 export async function listExpenses(): Promise<Expense[]> {
   const { data, error } = await supabase
@@ -15,6 +15,7 @@ export interface CreateExpenseInput {
   label: string
   amount: number
   is_recurring: boolean
+  recurrence_frequency?: ExpenseRecurrence | null
   expense_date: string
 }
 

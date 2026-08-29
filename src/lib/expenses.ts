@@ -9,8 +9,11 @@ function parseDate(iso: string) {
  * Montant d'une dépense effectivement imputable à la période [start, end].
  * Pour une dépense ponctuelle : le montant si sa date tombe dans la période, sinon 0.
  * Pour une charge récurrente : le montant multiplié par le nombre d'échéances
- * mensuelles (même jour du mois que expense_date, borné à recurrence_end si
- * défini) qui tombent dans la période.
+ * (mensuelles ou hebdomadaires selon recurrence_frequency, ancrées sur
+ * expense_date, bornées à recurrence_end si défini) qui tombent dans la
+ * période. Un mois peut ainsi compter 4 ou 5 échéances hebdomadaires selon
+ * la façon dont les semaines tombent — c'est le reflet exact des sorties
+ * d'argent réelles, pas une moyenne lissée.
  */
 export function expenseAmountInRange(expense: Expense, start: Date, end: Date): number {
   const anchor = parseDate(expense.expense_date)
@@ -23,17 +26,25 @@ export function expenseAmountInRange(expense: Expense, start: Date, end: Date): 
   const rangeEnd = recurrenceEnd && recurrenceEnd < end ? recurrenceEnd : end
   if (rangeEnd < start || rangeEnd < anchor) return 0
 
-  const day = anchor.getDate()
   let occurrences = 0
-  const cursor = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
 
-  while (cursor <= rangeEnd) {
-    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
-    const occurrence = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(day, daysInMonth))
-    if (occurrence >= anchor && occurrence >= start && occurrence <= rangeEnd) {
-      occurrences++
+  if (expense.recurrence_frequency === 'WEEKLY') {
+    const cursor = new Date(anchor)
+    while (cursor <= rangeEnd) {
+      if (cursor >= start) occurrences++
+      cursor.setDate(cursor.getDate() + 7)
     }
-    cursor.setMonth(cursor.getMonth() + 1)
+  } else {
+    const day = anchor.getDate()
+    const cursor = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    while (cursor <= rangeEnd) {
+      const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
+      const occurrence = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(day, daysInMonth))
+      if (occurrence >= anchor && occurrence >= start && occurrence <= rangeEnd) {
+        occurrences++
+      }
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
   }
 
   return occurrences * expense.amount

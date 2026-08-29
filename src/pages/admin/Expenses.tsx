@@ -9,7 +9,13 @@ import {
 } from '../../services/expenses'
 import { totalExpensesInRange, expenseAmountInRange } from '../../lib/expenses'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
-import { EXPENSE_CATEGORY_LABELS, type Expense, type ExpenseCategory } from '../../types/database'
+import {
+  EXPENSE_CATEGORY_LABELS,
+  EXPENSE_RECURRENCE_LABELS,
+  type Expense,
+  type ExpenseCategory,
+  type ExpenseRecurrence,
+} from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
 import { Button } from '../../components/ui/Button'
@@ -58,14 +64,15 @@ export default function AdminExpenses() {
         <PeriodSwitcher pf={pf} />
       </div>
 
-      <h2 className="mb-3 text-lg font-bold text-gray-900">Charges récurrentes (mensuelles)</h2>
+      <h2 className="mb-3 text-lg font-bold text-gray-900">Charges récurrentes</h2>
       <div className="mb-8 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[680px] text-left text-sm">
+        <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Libellé</th>
               <th className="px-4 py-3 font-medium">Catégorie</th>
-              <th className="px-4 py-3 font-medium">Montant / mois</th>
+              <th className="px-4 py-3 font-medium">Fréquence</th>
+              <th className="px-4 py-3 font-medium">Montant</th>
               <th className="px-4 py-3 font-medium">Depuis</th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium"></th>
@@ -78,6 +85,9 @@ export default function AdminExpenses() {
                 <tr key={e.id}>
                   <td className="px-4 py-3 font-medium text-gray-900">{e.label}</td>
                   <td className="px-4 py-3 text-gray-600">{EXPENSE_CATEGORY_LABELS[e.category]}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {e.recurrence_frequency ? EXPENSE_RECURRENCE_LABELS[e.recurrence_frequency] : '—'}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{e.amount.toLocaleString('fr-FR')} F</td>
                   <td className="px-4 py-3 text-gray-500">
                     {new Date(e.expense_date).toLocaleDateString('fr-FR')}
@@ -114,7 +124,7 @@ export default function AdminExpenses() {
             })}
             {recurring.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                   Aucune charge récurrente.
                 </td>
               </tr>
@@ -204,6 +214,7 @@ const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[]
 
 function CreateExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [isRecurring, setIsRecurring] = useState(false)
+  const [frequency, setFrequency] = useState<ExpenseRecurrence>('MONTHLY')
   const [category, setCategory] = useState<ExpenseCategory>('AUTRE')
   const [label, setLabel] = useState('')
   const [amount, setAmount] = useState('')
@@ -221,6 +232,7 @@ function CreateExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved
         label,
         amount: Number(amount),
         is_recurring: isRecurring,
+        recurrence_frequency: isRecurring ? frequency : null,
         expense_date: expenseDate,
       }
       await createExpense(input)
@@ -235,7 +247,7 @@ function CreateExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved
   return (
     <Modal title="Nouvelle dépense" onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <label className="mb-4 flex cursor-pointer items-start gap-2 rounded-xl border border-gray-200 p-3 hover:bg-gray-50">
+        <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-xl border border-gray-200 p-3 hover:bg-gray-50">
           <button
             type="button"
             onClick={() => setIsRecurring((v) => !v)}
@@ -244,13 +256,25 @@ function CreateExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved
             {isRecurring ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
           </button>
           <span className="text-sm">
-            <span className="block font-medium text-gray-900">Charge récurrente (mensuelle)</span>
+            <span className="block font-medium text-gray-900">Charge récurrente</span>
             <span className="block text-gray-500">
-              Comptée automatiquement chaque mois à partir de la date choisie, jusqu'à ce qu'elle soit
-              arrêtée.
+              Comptée automatiquement chaque semaine ou chaque mois à partir de la date choisie,
+              jusqu'à ce qu'elle soit arrêtée.
             </span>
           </span>
         </label>
+
+        {isRecurring && (
+          <Field label="Fréquence">
+            <Select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as ExpenseRecurrence)}
+            >
+              <option value="MONTHLY">Mensuelle</option>
+              <option value="WEEKLY">Hebdomadaire</option>
+            </Select>
+          </Field>
+        )}
 
         <Field label="Catégorie">
           <Select value={category} onChange={(e) => setCategory(e.target.value as ExpenseCategory)}>

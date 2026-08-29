@@ -9,6 +9,7 @@ export type PackageStatus =
   | 'RETOUR'
 export type CommissionType = 'RATE' | 'FIXED_PER_TIER'
 export type ExpenseCategory = 'SALAIRE_AGENT' | 'SALAIRE_LIVREUR' | 'CARBURANT' | 'REPARATION' | 'AUTRE'
+export type ExpenseRecurrence = 'MONTHLY' | 'WEEKLY'
 
 export interface CompanyGroup {
   id: string
@@ -101,6 +102,7 @@ export interface Expense {
   label: string
   amount: number
   is_recurring: boolean
+  recurrence_frequency: ExpenseRecurrence | null
   expense_date: string
   recurrence_end: string | null
   created_by: string | null
@@ -154,6 +156,11 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   CARBURANT: 'Carburant',
   REPARATION: 'Réparation',
   AUTRE: 'Autre',
+}
+
+export const EXPENSE_RECURRENCE_LABELS: Record<ExpenseRecurrence, string> = {
+  MONTHLY: 'Mensuelle',
+  WEEKLY: 'Hebdomadaire',
 }
 
 export const COMMISSION_TYPE_LABELS: Record<CommissionType, string> = {
