@@ -11,6 +11,7 @@ import Login from './pages/auth/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminCompanies from './pages/admin/Companies'
 import AdminDrivers from './pages/admin/Drivers'
+import AdminDriverDetail from './pages/admin/DriverDetail'
 import AdminPackages from './pages/admin/Packages'
 import AdminPackageDetail from './pages/admin/PackageDetail'
 import AdminTrash from './pages/admin/Trash'
@@ -65,6 +66,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                   <AdminDrivers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="drivers/:id"
+              element={
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <AdminDriverDetail />
                 </ProtectedRoute>
               }
             />

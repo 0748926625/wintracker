@@ -11,6 +11,16 @@ export async function getMyDriver(profileId: string): Promise<Driver> {
   return data as unknown as Driver
 }
 
+export async function getDriver(id: string): Promise<Driver> {
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*, profile:profiles(*)')
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return data as unknown as Driver
+}
+
 export async function listDrivers(): Promise<Driver[]> {
   const { data, error } = await supabase
     .from('drivers')
