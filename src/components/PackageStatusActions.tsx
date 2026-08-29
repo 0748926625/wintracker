@@ -94,6 +94,16 @@ export function PackageStatusActions({
         </>
       )}
 
+      {pkg.status === 'RETOUR' && (
+        <Button
+          className="w-full"
+          loading={busy}
+          onClick={() => run(() => nouvelleTentative(pkg.id))}
+        >
+          NOUVELLE TENTATIVE
+        </Button>
+      )}
+
       {confirmingPickup && (
         <Modal title="Confirmer la récupération" onClose={() => setConfirmingPickup(false)}>
           <p className="mb-4 text-gray-600">
