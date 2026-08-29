@@ -3,13 +3,13 @@ import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw }
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useGare } from '../../hooks/useGare'
-import { useMonthFilter } from '../../hooks/useMonthFilter'
+import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listAllPackages, listCompanyPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
-import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
+import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 import type { Company, PackageStatus } from '../../types/database'
 
 export default function AdminDashboard() {
@@ -40,11 +40,11 @@ export default function AdminDashboard() {
     activeCompanyId ?? 'all',
   )
 
-  const mf = useMonthFilter()
+  const pf = usePeriodFilter()
 
   if (loading) return <PageLoader />
 
-  const scoped = packages.filter((p) => mf.inRange(p.created_at))
+  const scoped = packages.filter((p) => pf.inRange(p.created_at))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
 
   return (
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
               ))}
             </Select>
           )}
-          <MonthSwitcher mf={mf} />
+          <PeriodSwitcher pf={pf} />
         </div>
       </div>
 

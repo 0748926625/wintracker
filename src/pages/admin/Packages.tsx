@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
-import { useMonthFilter } from '../../hooks/useMonthFilter'
+import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import {
   listAllPackages,
@@ -19,7 +19,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select, Textarea } from '../../components/ui/Field'
-import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
+import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -49,7 +49,7 @@ export default function AdminPackages() {
   const [companyFilter, setCompanyFilter] = useState('ALL')
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [creating, setCreating] = useState(false)
-  const mf = useMonthFilter()
+  const pf = usePeriodFilter()
 
   useEffect(() => {
     if (isSuperAdmin) listCompanies().then(setFilterCompanies)
@@ -62,15 +62,15 @@ export default function AdminPackages() {
     isSuperAdmin && companyFilter !== 'ALL'
       ? byStatus.filter((p) => p.company_id === companyFilter)
       : byStatus
-  const byMonth = byCompany.filter((p) => mf.inRange(p.created_at))
+  const byPeriod = byCompany.filter((p) => pf.inRange(p.created_at))
   const query = search.trim().toLowerCase()
   const filtered = query
-    ? byMonth.filter(
+    ? byPeriod.filter(
         (p) =>
           p.external_reference?.toLowerCase().includes(query) ||
           p.tracking_number.toLowerCase().includes(query),
       )
-    : byMonth
+    : byPeriod
 
   return (
     <div>
@@ -122,7 +122,7 @@ export default function AdminPackages() {
           </Select>
         )}
 
-        <MonthSwitcher mf={mf} />
+        <PeriodSwitcher pf={pf} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">

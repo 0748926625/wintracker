@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCompanyGroup } from '../../hooks/useCompanyGroup'
-import { useMonthFilter } from '../../hooks/useMonthFilter'
+import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
 import type { Package } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
-import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
+import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 
 export default function CompanyFinance() {
   const { profile } = useAuth()
@@ -17,7 +17,7 @@ export default function CompanyFinance() {
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBranches, setSelectedBranches] = useState<Set<string>>(new Set())
-  const mf = useMonthFilter()
+  const pf = usePeriodFilter()
 
   useEffect(() => {
     if (groupLoading || !profile?.company_id) return
@@ -37,7 +37,7 @@ export default function CompanyFinance() {
   if (groupLoading || loading) return <PageLoader />
 
   const delivered = packages
-    .filter((p) => p.status === 'LIVRE' && mf.inRange(p.created_at))
+    .filter((p) => p.status === 'LIVRE' && pf.inRange(p.created_at))
     .filter((p) => selectedBranches.size === 0 || selectedBranches.has(p.company_id))
   const earnings = delivered.reduce(
     (sum, p) => sum + (commissionForPackage(p, companyById.get(p.company_id) ?? null) ?? 0),
@@ -61,7 +61,7 @@ export default function CompanyFinance() {
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Finances</h1>
-        <MonthSwitcher mf={mf} />
+        <PeriodSwitcher pf={pf} />
       </div>
 
       {isMultiBranch && (
@@ -99,7 +99,7 @@ export default function CompanyFinance() {
 
       <p className="mt-4 text-xs text-gray-400">
         Montants en FCFA. Vos gains correspondent à la commission qui vous est due, calculée
-        uniquement sur les colis livrés avec succès du mois sélectionné.
+        uniquement sur les colis livrés avec succès de la période sélectionnée.
       </p>
 
       {isMultiBranch && (

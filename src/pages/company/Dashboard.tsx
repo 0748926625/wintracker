@@ -4,14 +4,14 @@ import { Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCompanyGroup } from '../../hooks/useCompanyGroup'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
-import { useMonthFilter } from '../../hooks/useMonthFilter'
+import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
 import type { PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatCard } from '../../components/ui/StatCard'
-import { MonthSwitcher } from '../../components/ui/MonthSwitcher'
+import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -42,7 +42,7 @@ export default function CompanyDashboard() {
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [selectedBranches, setSelectedBranches] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
-  const mf = useMonthFilter()
+  const pf = usePeriodFilter()
 
   function toggleBranch(id: string) {
     setSelectedBranches((prev) => {
@@ -56,7 +56,7 @@ export default function CompanyDashboard() {
   if (groupLoading || loading) return <PageLoader />
 
   const scoped = packages
-    .filter((p) => mf.inRange(p.created_at))
+    .filter((p) => pf.inRange(p.created_at))
     .filter((p) => selectedBranches.size === 0 || selectedBranches.has(p.company_id))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
   const earnings = scoped.reduce(
@@ -77,7 +77,7 @@ export default function CompanyDashboard() {
     <div>
       <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
-        <MonthSwitcher mf={mf} />
+        <PeriodSwitcher pf={pf} />
       </div>
       <p className="mb-6 text-gray-500">Vos colis</p>
 
