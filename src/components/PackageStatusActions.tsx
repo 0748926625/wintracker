@@ -95,13 +95,18 @@ export function PackageStatusActions({
       )}
 
       {pkg.status === 'RETOUR' && (
-        <Button
-          className="w-full"
-          loading={busy}
-          onClick={() => run(() => nouvelleTentative(pkg.id))}
-        >
-          NOUVELLE TENTATIVE
-        </Button>
+        <>
+          <Button
+            className="w-full"
+            loading={busy}
+            onClick={() => run(() => nouvelleTentative(pkg.id))}
+          >
+            NOUVELLE TENTATIVE
+          </Button>
+          <Button variant="danger" className="w-full" onClick={() => setFailureOpen(true)}>
+            MARQUER ÉCHEC DÉFINITIF
+          </Button>
+        </>
       )}
 
       {confirmingPickup && (
