@@ -148,7 +148,7 @@ export default function CompanyDashboard() {
         <table className="w-full min-w-[880px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-medium">N° colis</th>
+              <th className="px-4 py-3 font-medium">Code colis</th>
               {isMultiBranch && <th className="px-4 py-3 font-medium">Succursale</th>}
               <th className="px-4 py-3 font-medium">Destinataire</th>
               <th className="px-4 py-3 font-medium">Adresse</th>

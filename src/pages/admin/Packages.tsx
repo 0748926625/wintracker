@@ -129,7 +129,7 @@ export default function AdminPackages() {
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-medium">N° colis</th>
+              <th className="px-4 py-3 font-medium">Code colis</th>
               <th className="px-4 py-3 font-medium">Compagnie</th>
               <th className="px-4 py-3 font-medium">Destinataire</th>
               <th className="px-4 py-3 font-medium">Prix</th>
@@ -301,7 +301,7 @@ function CreatePackageModal({ onClose, onSaved }: { onClose: () => void; onSaved
           </Select>
         </Field>
 
-        <Field label="Numéro de colis (facultatif)">
+        <Field label="Code colis (facultatif)">
           <Input
             value={form.external_reference}
             onChange={(e) => setForm({ ...form, external_reference: e.target.value })}

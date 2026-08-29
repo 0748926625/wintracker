@@ -83,7 +83,7 @@ export default function AdminDriverDetail() {
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-medium">N° colis</th>
+              <th className="px-4 py-3 font-medium">Code colis</th>
               <th className="px-4 py-3 font-medium">Compagnie</th>
               <th className="px-4 py-3 font-medium">Destinataire</th>
               <th className="px-4 py-3 font-medium">Prix</th>

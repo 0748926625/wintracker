@@ -129,7 +129,7 @@ export default function AdminPackageDetail() {
 
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <Info label="Compagnie" value={pkg.company?.name} />
-          <Info label="Numéro de colis" value={pkg.external_reference} />
+          <Info label="Code colis" value={pkg.external_reference} />
           <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
           <Info label="Enregistré par" value={creatorLabel(pkg.creator)} />
@@ -410,7 +410,7 @@ function EditPackageModal({
           </Select>
         </Field>
 
-        <Field label="Numéro de colis (facultatif)">
+        <Field label="Code colis (facultatif)">
           <Input
             value={form.external_reference}
             onChange={(e) => setForm({ ...form, external_reference: e.target.value })}
