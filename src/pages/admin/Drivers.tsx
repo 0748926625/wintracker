@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Trophy } from 'lucide-react'
+import { Plus, Trophy, Trash2 } from 'lucide-react'
 import { listDrivers, updateDriverStatus } from '../../services/drivers'
 import { listAllPackages } from '../../services/packages'
-import { createUser } from '../../services/admin'
+import { createUser, deleteUser } from '../../services/admin'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import type { Driver } from '../../types/database'
@@ -16,6 +16,7 @@ import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 export default function AdminDrivers() {
   const [drivers, setDrivers] = useState<Driver[] | null>(null)
   const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState<Driver | null>(null)
   const pf = usePeriodFilter()
   const packagesFetcher = useCallback(() => listAllPackages(), [])
   const { packages } = useRealtimePackages(packagesFetcher, 'all', 'all')
@@ -129,12 +130,20 @@ export default function AdminDrivers() {
                 </td>
                 <td className="px-4 py-3 text-gray-600">{d.active_packages_count}</td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => toggleStatus(d)}
-                    className="text-sm font-medium text-brand-600 hover:underline"
-                  >
-                    {d.status === 'ACTIVE' ? 'Désactiver' : 'Activer'}
-                  </button>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => toggleStatus(d)}
+                      className="text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      {d.status === 'ACTIVE' ? 'Désactiver' : 'Activer'}
+                    </button>
+                    <button
+                      onClick={() => setDeleting(d)}
+                      className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -158,7 +167,66 @@ export default function AdminDrivers() {
           }}
         />
       )}
+
+      {deleting && (
+        <DeleteDriverModal
+          driver={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={async () => {
+            setDeleting(null)
+            await refresh()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function DeleteDriverModal({
+  driver,
+  onClose,
+  onDeleted,
+}: {
+  driver: Driver
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleDelete() {
+    if (!driver.profile) return
+    setLoading(true)
+    setError(null)
+    try {
+      await deleteUser(driver.profile.user_id)
+      onDeleted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Supprimer le livreur" onClose={onClose}>
+      <p className="mb-4 text-gray-600">
+        Confirmez-vous la suppression définitive du compte de <strong>{driver.profile?.name}</strong> ?
+        Il ne pourra plus se connecter à l'application, et les colis déjà livrés par lui perdront leur
+        attribution (ils n'apparaîtront plus dans son historique ni dans le classement des meilleurs
+        livreurs). Préférez « Désactiver » si vous voulez seulement l'empêcher de se connecter en
+        conservant l'historique.
+      </p>
+      {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose}>
+          Annuler
+        </Button>
+        <Button variant="danger" className="flex-1" loading={loading} onClick={handleDelete}>
+          Supprimer
+        </Button>
+      </div>
+    </Modal>
   )
 }
 
