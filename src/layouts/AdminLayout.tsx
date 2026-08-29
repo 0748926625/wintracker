@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, LogOut, Repeat, KeyRound, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, Receipt, LogOut, Repeat, KeyRound, Trash2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useGare } from '../hooks/useGare'
 import { ChangePasswordModal } from '../components/ChangePasswordModal'
@@ -28,6 +28,7 @@ const superAdminLinks: NavLinkItem[] = [
   { to: '/admin/agents', label: 'Agents Wintrack', shortLabel: 'Wintrack', icon: Users },
   { to: '/admin/gare-agents', label: 'Agents de gare', shortLabel: 'Gare', icon: IdCard },
   { to: '/admin/finance', label: 'Finances', icon: Wallet },
+  { to: '/admin/expenses', label: 'Dépenses', icon: Receipt },
 ]
 
 export function AdminLayout() {

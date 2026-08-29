@@ -8,6 +8,7 @@ export type PackageStatus =
   | 'ECHEC'
   | 'RETOUR'
 export type CommissionType = 'RATE' | 'FIXED_PER_TIER'
+export type ExpenseCategory = 'SALAIRE_AGENT' | 'SALAIRE_LIVREUR' | 'CARBURANT' | 'REPARATION' | 'AUTRE'
 
 export interface CompanyGroup {
   id: string
@@ -94,6 +95,18 @@ export interface Package {
   creator?: Profile
 }
 
+export interface Expense {
+  id: string
+  category: ExpenseCategory
+  label: string
+  amount: number
+  is_recurring: boolean
+  expense_date: string
+  recurrence_end: string | null
+  created_by: string | null
+  created_at: string
+}
+
 export interface PackageEvent {
   id: string
   package_id: string
@@ -134,6 +147,14 @@ export const PACKAGE_STATUS_COLORS: Record<PackageStatus, string> = {
 }
 
 export const PRICE_OPTIONS = [1000, 1500, 2000, 2500, 3000] as const
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  SALAIRE_AGENT: 'Salaire agent Wintrack',
+  SALAIRE_LIVREUR: 'Salaire livreur',
+  CARBURANT: 'Carburant',
+  REPARATION: 'Réparation',
+  AUTRE: 'Autre',
+}
 
 export const COMMISSION_TYPE_LABELS: Record<CommissionType, string> = {
   RATE: 'Taux (%) par livraison',

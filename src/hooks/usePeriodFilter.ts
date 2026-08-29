@@ -116,6 +116,8 @@ export function usePeriodFilter() {
     setMode,
     label,
     isCurrent,
+    start,
+    end,
     inRange,
     prev: () => shift(-1),
     next: () => !isCurrent && shift(1),

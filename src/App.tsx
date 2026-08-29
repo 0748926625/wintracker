@@ -18,6 +18,7 @@ import AdminTrash from './pages/admin/Trash'
 import AdminAgents from './pages/admin/Agents'
 import AdminGareAgents from './pages/admin/GareAgents'
 import AdminFinance from './pages/admin/Finance'
+import AdminExpenses from './pages/admin/Expenses'
 import CompanyDashboard from './pages/company/Dashboard'
 import CompanyPackageDetail from './pages/company/PackageDetail'
 import CompanyFinance from './pages/company/Finance'
@@ -98,6 +99,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                   <AdminFinance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="expenses"
+              element={
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <AdminExpenses />
                 </ProtectedRoute>
               }
             />

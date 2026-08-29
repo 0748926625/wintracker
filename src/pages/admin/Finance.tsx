@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
 import { listAllPackages } from '../../services/packages'
+import { listExpenses } from '../../services/expenses'
 import { commissionForPackage } from '../../lib/commission'
+import { totalExpensesInRange } from '../../lib/expenses'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
-import type { Company, CompanyGroup, Package } from '../../types/database'
+import type { Company, CompanyGroup, Expense, Package } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
 import { Select } from '../../components/ui/Field'
@@ -16,6 +18,7 @@ export default function AdminFinance() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [packages, setPackages] = useState<Package[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [scope, setScope] = useState<Scope>({ type: 'ALL' })
   const [loading, setLoading] = useState(true)
   const pf = usePeriodFilter()
@@ -23,6 +26,7 @@ export default function AdminFinance() {
   useEffect(() => {
     listCompanies().then(setCompanies)
     listCompanyGroups().then(setGroups)
+    listExpenses().then(setExpenses)
     listAllPackages()
       .then(setPackages)
       .finally(() => setLoading(false))
@@ -57,8 +61,11 @@ export default function AdminFinance() {
       commission += commissionForPackage(p, company) ?? 0
       delivered += 1
     }
-    return { revenue, commission, profit: revenue - commission, delivered_count: delivered }
+    return { revenue, commission, margin: revenue - commission, delivered_count: delivered }
   }, [packages, companies, scope, pf])
+
+  const periodExpenses = totalExpensesInRange(expenses, pf.start, pf.end)
+  const realProfit = summary.margin - periodExpenses
 
   return (
     <div>
@@ -98,12 +105,25 @@ export default function AdminFinance() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Chiffre d'affaires" value={summary.revenue} />
           <StatCard label="Commissions versées" value={summary.commission} />
-          <StatCard label="Bénéfice" value={summary.profit} accent="text-green-600" />
+          <StatCard label="Marge" value={summary.margin} accent="text-green-600" />
           <StatCard label="Colis livrés" value={summary.delivered_count} />
+          {scope.type === 'ALL' && (
+            <>
+              <StatCard label="Dépenses" value={periodExpenses} accent="text-red-600" />
+              <StatCard
+                label="Bénéfice (réel)"
+                value={realProfit}
+                accent={realProfit >= 0 ? 'text-green-600' : 'text-red-600'}
+              />
+            </>
+          )}
         </div>
       )}
       <p className="mt-4 text-xs text-gray-400">
-        Montants en FCFA, calculés sur les colis livrés avec succès de la période sélectionnée uniquement.
+        Montants en FCFA, calculés sur les colis livrés avec succès de la période sélectionnée
+        uniquement. La marge (CA - commissions) ne tient pas compte des dépenses ; le bénéfice (réel)
+        en déduit les charges enregistrées dans le menu Dépenses — non réparties par compagnie, donc
+        affiché uniquement pour "Toutes les compagnies".
       </p>
     </div>
   )
