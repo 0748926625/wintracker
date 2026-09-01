@@ -13,7 +13,6 @@ import {
 } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
-import { packageActivityDate } from '../../lib/packageDate'
 import { PRICE_OPTIONS, type Company, type GareAgent, type PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -63,7 +62,7 @@ export default function AdminPackages() {
     isSuperAdmin && companyFilter !== 'ALL'
       ? byStatus.filter((p) => p.company_id === companyFilter)
       : byStatus
-  const byPeriod = byCompany.filter((p) => pf.inRange(packageActivityDate(p)))
+  const byPeriod = byCompany.filter((p) => pf.inRange(p.created_at))
   const query = search.trim().toLowerCase()
   const filtered = query
     ? byPeriod.filter(
@@ -155,7 +154,7 @@ export default function AdminPackages() {
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(packageActivityDate(p)).toLocaleDateString('fr-FR')}
+                  {new Date(p.created_at).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
             ))}

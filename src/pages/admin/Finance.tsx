@@ -5,7 +5,6 @@ import { listAllPackages } from '../../services/packages'
 import { listExpenses } from '../../services/expenses'
 import { commissionForPackage } from '../../lib/commission'
 import { totalExpensesInRange } from '../../lib/expenses'
-import { packageActivityDate } from '../../lib/packageDate'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import type { Company, CompanyGroup, Expense, Package } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
@@ -55,7 +54,7 @@ export default function AdminFinance() {
     let delivered = 0
     for (const p of packages) {
       if (p.status !== 'LIVRE' || p.price == null) continue
-      if (!pf.inRange(packageActivityDate(p))) continue
+      if (!pf.inRange(p.created_at)) continue
       if (scopedCompanyIds && !scopedCompanyIds.has(p.company_id)) continue
       const company = companyById.get(p.company_id) ?? null
       revenue += p.price

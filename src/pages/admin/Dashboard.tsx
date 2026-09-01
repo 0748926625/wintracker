@@ -1,17 +1,46 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listAllPackages, listCompanyPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
-import { packageActivityDate } from '../../lib/packageDate'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
-import type { Company, PackageStatus } from '../../types/database'
+import { PACKAGE_STATUS_LABELS, type Company, type PackageStatus } from '../../types/database'
+
+const STATUS_HEX: Record<PackageStatus, string> = {
+  EN_ATTENTE: '#6b7280',
+  RECUPERE: '#3b82f6',
+  EN_LIVRAISON: '#f59e0b',
+  LIVRE: '#22c55e',
+  ECHEC: '#ef4444',
+  RETOUR: '#a855f7',
+}
+
+const MAX_EVOLUTION_DAYS = 60
+
+function dayBounds(d: Date) {
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0)
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+  return { start, end }
+}
 
 export default function AdminDashboard() {
   const { profile } = useAuth()
@@ -45,8 +74,35 @@ export default function AdminDashboard() {
 
   if (loading) return <PageLoader />
 
-  const scoped = packages.filter((p) => pf.inRange(packageActivityDate(p)))
+  const scoped = packages.filter((p) => pf.inRange(p.created_at))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
+
+  const statusData = (Object.keys(PACKAGE_STATUS_LABELS) as PackageStatus[])
+    .map((status) => ({ status, name: PACKAGE_STATUS_LABELS[status], value: count(status) }))
+    .filter((d) => d.value > 0)
+
+  const days: Date[] = []
+  {
+    const cursor = new Date(pf.start.getFullYear(), pf.start.getMonth(), pf.start.getDate())
+    const last = new Date(pf.end.getFullYear(), pf.end.getMonth(), pf.end.getDate())
+    while (cursor <= last && days.length < MAX_EVOLUTION_DAYS) {
+      days.push(new Date(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
+  const evolutionData = days.map((date) => {
+    const { start, end } = dayBounds(date)
+    const delivered = packages.filter((p) => {
+      if (p.status !== 'LIVRE') return false
+      const d = new Date(p.created_at)
+      return d >= start && d <= end
+    })
+    return {
+      label: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      livres: delivered.length,
+      ca: delivered.reduce((sum, p) => sum + (p.price ?? 0), 0),
+    }
+  })
 
   return (
     <div>
@@ -84,6 +140,68 @@ export default function AdminDashboard() {
         />
         <StatCard label="Échecs" value={count('ECHEC')} icon={XCircle} accent="text-red-600" />
         <StatCard label="Retours" value={count('RETOUR')} icon={RotateCcw} />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <h2 className="mb-3 font-semibold text-gray-900">Répartition par statut</h2>
+          {statusData.length === 0 ? (
+            <p className="py-12 text-center text-sm text-gray-400">
+              Aucun colis sur cette période.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={95}
+                  paddingAngle={2}
+                >
+                  {statusData.map((d) => (
+                    <Cell key={d.status} fill={STATUS_HEX[d.status]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => [value, 'Colis']} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <h2 className="mb-3 font-semibold text-gray-900">Évolution des livraisons</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={evolutionData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} allowDecimals={false} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Legend />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="livres"
+                name="Colis livrés"
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="ca"
+                name="Chiffre d'affaires (F)"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )
