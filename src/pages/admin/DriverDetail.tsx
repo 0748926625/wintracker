@@ -5,6 +5,7 @@ import { getDriver } from '../../services/drivers'
 import { listDriverPackages } from '../../services/packages'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { packageActivityDate } from '../../lib/packageDate'
 import type { Driver, Package } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
@@ -33,11 +34,9 @@ export default function AdminDriverDetail() {
   if (driverLoading || packagesLoading) return <PageLoader />
   if (!driver) return <p className="text-gray-500">Livreur introuvable.</p>
 
-  const livres = packages.filter(
-    (p) => p.status === 'LIVRE' && pf.inRange(p.delivered_at ?? p.created_at),
-  )
-  const retours = packages.filter((p) => p.status === 'RETOUR' && pf.inRange(p.updated_at))
-  const echecs = packages.filter((p) => p.status === 'ECHEC' && pf.inRange(p.updated_at))
+  const livres = packages.filter((p) => p.status === 'LIVRE' && pf.inRange(packageActivityDate(p)))
+  const retours = packages.filter((p) => p.status === 'RETOUR' && pf.inRange(packageActivityDate(p)))
+  const echecs = packages.filter((p) => p.status === 'ECHEC' && pf.inRange(packageActivityDate(p)))
   const cash = livres.reduce((sum, p) => sum + (p.price ?? 0), 0)
   const enCours = packages.filter((p) =>
     ['EN_ATTENTE', 'RECUPERE', 'EN_LIVRAISON'].includes(p.status),

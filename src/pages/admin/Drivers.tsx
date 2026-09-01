@@ -6,6 +6,7 @@ import { listAllPackages } from '../../services/packages'
 import { createUser, deleteUser } from '../../services/admin'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { packageActivityDate } from '../../lib/packageDate'
 import type { Driver } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Button } from '../../components/ui/Button'
@@ -39,7 +40,7 @@ export default function AdminDrivers() {
   const leaderboard = drivers
     .map((d) => {
       const livres = packages.filter(
-        (p) => p.driver_id === d.id && p.status === 'LIVRE' && pf.inRange(p.delivered_at ?? p.created_at),
+        (p) => p.driver_id === d.id && p.status === 'LIVRE' && pf.inRange(packageActivityDate(p)),
       )
       return {
         driver: d,

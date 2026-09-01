@@ -7,6 +7,7 @@ import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
+import { packageActivityDate } from '../../lib/packageDate'
 import type { PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -56,7 +57,7 @@ export default function CompanyDashboard() {
   if (groupLoading || loading) return <PageLoader />
 
   const scoped = packages
-    .filter((p) => pf.inRange(p.created_at))
+    .filter((p) => pf.inRange(packageActivityDate(p)))
     .filter((p) => selectedBranches.size === 0 || selectedBranches.has(p.company_id))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
   const earnings = scoped.reduce(
@@ -186,7 +187,7 @@ export default function CompanyDashboard() {
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(p.created_at).toLocaleDateString('fr-FR')}
+                  {new Date(packageActivityDate(p)).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
             ))}

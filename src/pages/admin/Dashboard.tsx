@@ -6,6 +6,7 @@ import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listAllPackages, listCompanyPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
+import { packageActivityDate } from '../../lib/packageDate'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
 
   if (loading) return <PageLoader />
 
-  const scoped = packages.filter((p) => pf.inRange(p.created_at))
+  const scoped = packages.filter((p) => pf.inRange(packageActivityDate(p)))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
 
   return (
