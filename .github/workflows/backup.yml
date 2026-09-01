@@ -2,7 +2,7 @@ name: Sauvegarde automatique par email
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # chaque lundi 06:00 UTC
+    - cron: '0 22 * * *' # chaque jour à 22:00 UTC (= heure d'Abidjan)
   workflow_dispatch:
 
 jobs:
