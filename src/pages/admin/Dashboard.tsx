@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -17,13 +17,21 @@ import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
-import { listAllPackages, listCompanyPackages } from '../../services/packages'
+import { listAllPackages, listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
+import { listCompanyGroups } from '../../services/groups'
 import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
-import { PACKAGE_STATUS_LABELS, type Company, type PackageStatus } from '../../types/database'
+import {
+  PACKAGE_STATUS_LABELS,
+  type Company,
+  type CompanyGroup,
+  type PackageStatus,
+} from '../../types/database'
+
+type Scope = { type: 'ALL' } | { type: 'COMPANY'; id: string } | { type: 'GROUP'; id: string }
 
 const STATUS_HEX: Record<PackageStatus, string> = {
   EN_ATTENTE: '#6b7280',
@@ -48,26 +56,41 @@ export default function AdminDashboard() {
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
 
   const [companies, setCompanies] = useState<Company[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState('ALL')
+  const [groups, setGroups] = useState<CompanyGroup[]>([])
+  const [scope, setScope] = useState<Scope>({ type: 'ALL' })
 
   useEffect(() => {
-    if (isSuperAdmin) listCompanies().then(setCompanies)
+    if (isSuperAdmin) {
+      listCompanies().then(setCompanies)
+      listCompanyGroups().then(setGroups)
+    }
   }, [isSuperAdmin])
 
-  const activeCompanyId = isSuperAdmin
-    ? selectedCompanyId === 'ALL'
-      ? null
-      : selectedCompanyId
-    : gareCompanyId
+  function handleScopeChange(value: string) {
+    if (value === 'ALL') setScope({ type: 'ALL' })
+    else {
+      const [type, id] = value.split(':')
+      setScope({ type: type as 'COMPANY' | 'GROUP', id })
+    }
+  }
 
-  const fetcher = useCallback(
-    () => (activeCompanyId ? listCompanyPackages(activeCompanyId) : listAllPackages()),
-    [activeCompanyId],
-  )
+  const activeCompanyIds = useMemo(() => {
+    if (!isSuperAdmin) return gareCompanyId ? [gareCompanyId] : null
+    if (scope.type === 'ALL') return null
+    if (scope.type === 'COMPANY') return [scope.id]
+    return companies.filter((c) => c.group_id === scope.id).map((c) => c.id)
+  }, [isSuperAdmin, gareCompanyId, scope, companies])
+
+  const fetcher = useCallback(() => {
+    if (!activeCompanyIds) return listAllPackages()
+    if (activeCompanyIds.length === 1) return listCompanyPackages(activeCompanyIds[0])
+    return listCompaniesPackages(activeCompanyIds)
+  }, [activeCompanyIds])
+  const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
   const { packages, loading } = useRealtimePackages(
     fetcher,
-    activeCompanyId ? 'company_id' : 'all',
-    activeCompanyId ?? 'all',
+    singleCompanyId ? 'company_id' : 'all',
+    singleCompanyId ?? 'all',
   )
 
   const pf = usePeriodFilter()
@@ -111,16 +134,27 @@ export default function AdminDashboard() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {isSuperAdmin && (
             <Select
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              value={scope.type === 'ALL' ? 'ALL' : `${scope.type}:${scope.id}`}
+              onChange={(e) => handleScopeChange(e.target.value)}
               className="sm:max-w-xs"
             >
               <option value="ALL">Toutes les compagnies</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {groups.length > 0 && (
+                <optgroup label="Groupes">
+                  {groups.map((g) => (
+                    <option key={g.id} value={`GROUP:${g.id}`}>
+                      {g.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="Compagnies">
+                {companies.map((c) => (
+                  <option key={c.id} value={`COMPANY:${c.id}`}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
             </Select>
           )}
           <PeriodSwitcher pf={pf} />
