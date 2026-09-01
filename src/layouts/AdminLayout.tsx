@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, Receipt, LogOut, Repeat, KeyRound, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Package, Building2, Truck, Users, IdCard, Wallet, Receipt, LogOut, Repeat, KeyRound, Trash2, Menu, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useGare } from '../hooks/useGare'
 import { ChangePasswordModal } from '../components/ChangePasswordModal'
@@ -9,8 +9,6 @@ import { ChangePasswordModal } from '../components/ChangePasswordModal'
 interface NavLinkItem {
   to: string
   label: string
-  /** Libellé compact pour la barre du bas mobile, où l'espace est limité (7 onglets côté Super Admin). */
-  shortLabel?: string
   icon: LucideIcon
   end?: boolean
 }
@@ -25,8 +23,8 @@ const trashLink: NavLinkItem = { to: '/admin/trash', label: 'Corbeille', icon: T
 const superAdminLinks: NavLinkItem[] = [
   { to: '/admin/companies', label: 'Compagnies', icon: Building2 },
   { to: '/admin/drivers', label: 'Livreurs', icon: Truck },
-  { to: '/admin/agents', label: 'Agents Wintrack', shortLabel: 'Wintrack', icon: Users },
-  { to: '/admin/gare-agents', label: 'Agents de gare', shortLabel: 'Gare', icon: IdCard },
+  { to: '/admin/agents', label: 'Agents Wintrack', icon: Users },
+  { to: '/admin/gare-agents', label: 'Agents de gare', icon: IdCard },
   { to: '/admin/finance', label: 'Finances', icon: Wallet },
   { to: '/admin/expenses', label: 'Dépenses', icon: Receipt },
 ]
@@ -42,6 +40,7 @@ export function AdminLayout() {
     ...(isSuperAdmin ? superAdminLinks : []),
   ]
   const [changingPassword, setChangingPassword] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -133,23 +132,54 @@ export function AdminLayout() {
           <Outlet />
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 flex border-t border-gray-200 bg-white md:hidden">
-          {links.map(({ to, label, shortLabel, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium whitespace-nowrap ${
-                  isActive ? 'text-brand-600' : 'text-gray-500'
-                }`
-              }
-            >
-              <Icon className="h-5 w-5" />
-              {shortLabel ?? label}
-            </NavLink>
-          ))}
+        <nav className="fixed inset-x-0 bottom-0 flex justify-center border-t border-gray-200 bg-white md:hidden">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center gap-0.5 px-8 py-2.5 text-[11px] font-medium text-gray-600"
+          >
+            <Menu className="h-5 w-5" />
+            Menu
+          </button>
         </nav>
+
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <div className="absolute inset-x-0 bottom-0 max-h-[75vh] overflow-y-auto rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)] shadow-xl">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <span className="text-sm font-semibold text-gray-900">Menu</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Fermer le menu"
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <nav className="p-2">
+                {links.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium ${
+                        isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-700 hover:bg-gray-50'
+                      }`
+                    }
+                  >
+                    <Icon className="h-5 w-5" />
+                    {label}
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+          </div>
+        )}
       </div>
 
       {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
