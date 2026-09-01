@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                     <Cell key={d.status} fill={STATUS_HEX[d.status]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => [value, 'Colis']} />
+                <Tooltip formatter={(value) => [value, 'Colis']} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
