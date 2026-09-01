@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Printer } from 'lucide-react'
 import {
   ResponsiveContainer,
   PieChart,
@@ -143,7 +143,15 @@ export default function CompanyDashboard() {
     <div>
       <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Bonjour {profile?.name}</h1>
-        <PeriodSwitcher pf={pf} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <PeriodSwitcher pf={pf} />
+          <Link
+            to="/company/bilan"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-brand-600 hover:bg-gray-50"
+          >
+            <Printer className="h-4 w-4" /> Bilan
+          </Link>
+        </div>
       </div>
       <p className="mb-6 text-gray-500">Vos colis</p>
 

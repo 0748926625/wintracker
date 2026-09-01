@@ -24,6 +24,7 @@ import AdminBilan from './pages/admin/Bilan'
 import CompanyDashboard from './pages/company/Dashboard'
 import CompanyPackageDetail from './pages/company/PackageDetail'
 import CompanyFinance from './pages/company/Finance'
+import CompanyBilan from './pages/company/Bilan'
 import DriverDashboard from './pages/driver/Dashboard'
 import DriverPackageDetail from './pages/driver/PackageDetail'
 
@@ -143,6 +144,15 @@ export default function App() {
             <Route path="packages/:id" element={<CompanyPackageDetail />} />
             <Route path="finance" element={<CompanyFinance />} />
           </Route>
+
+          <Route
+            path="/company/bilan"
+            element={
+              <ProtectedRoute allowedRoles={['COMPANY_USER']}>
+                <CompanyBilan />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/driver"
