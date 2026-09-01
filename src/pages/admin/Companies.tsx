@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserPlus, Trash2, AlertTriangle, Layers, Ungroup, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus, UserPlus, Trash2, AlertTriangle, Layers, Ungroup, X, Printer } from 'lucide-react'
 import {
   listCompanies,
   createCompany,
@@ -108,12 +109,20 @@ export default function AdminCompanies() {
                       ({count} compagnie{count > 1 ? 's' : ''})
                     </span>
                   </span>
-                  <button
-                    onClick={() => setDeletingGroup(g)}
-                    className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
-                  >
-                    <Trash2 className="h-4 w-4" /> Supprimer
-                  </button>
+                  <span className="flex items-center gap-3">
+                    <Link
+                      to={`/admin/bilan/group/${g.id}`}
+                      className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      <Printer className="h-4 w-4" /> Bilan
+                    </Link>
+                    <button
+                      onClick={() => setDeletingGroup(g)}
+                      className="flex items-center gap-1 text-sm font-medium text-red-600 hover:underline"
+                    >
+                      <Trash2 className="h-4 w-4" /> Supprimer
+                    </button>
+                  </span>
                 </li>
               )
             })}
@@ -206,6 +215,12 @@ export default function AdminCompanies() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-3">
+                    <Link
+                      to={`/admin/bilan/company/${c.id}`}
+                      className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      <Printer className="h-4 w-4" /> Bilan
+                    </Link>
                     <button
                       onClick={() => setUserFor(c)}
                       className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"

@@ -121,6 +121,14 @@ export interface PackageEvent {
   created_at: string
 }
 
+/** Événement de traitement d'un colis par un agent, avec le colis concerné. */
+export interface AgentPackageEvent {
+  id: string
+  new_status: PackageStatus
+  created_at: string
+  package: Package
+}
+
 export interface DeliveryProof {
   id: string
   package_id: string

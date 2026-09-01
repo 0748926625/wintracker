@@ -11,6 +11,12 @@ export async function listAgents(): Promise<Profile[]> {
   return data as Profile[]
 }
 
+export async function getAgent(id: string): Promise<Profile> {
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single()
+  if (error) throw error
+  return data as Profile
+}
+
 export async function getAgentCompanies(agentProfileId: string): Promise<Company[]> {
   const { data, error } = await supabase
     .from('agent_companies')

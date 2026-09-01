@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Building2, Trash2, ShieldCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus, Building2, Trash2, ShieldCheck, Printer } from 'lucide-react'
 import {
   listAgents,
   getAgentCompanies,
@@ -94,6 +95,12 @@ export default function AdminAgents() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-3">
+                    <Link
+                      to={`/admin/bilan/agent/${a.id}`}
+                      className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      <Printer className="h-4 w-4" /> Bilan
+                    </Link>
                     <button
                       onClick={() => setAssigning(a)}
                       className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"

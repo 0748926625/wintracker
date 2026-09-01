@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Package, PackageEvent, PackageStatus } from '../types/database'
+import type { AgentPackageEvent, Package, PackageEvent, PackageStatus } from '../types/database'
 import { getCurrentLocation, type GeoPoint } from '../lib/geolocation'
 
 const PACKAGE_SELECT = `*, company:companies(*, commission_tiers:company_commission_tiers(*)), driver:drivers(*, profile:profiles(*)), agent:gare_agents(*), creator:profiles!packages_created_by_fkey(*)`
@@ -106,6 +106,18 @@ export async function getPackage(id: string): Promise<Package> {
     .single()
   if (error) throw error
   return data as unknown as Package
+}
+
+/** Colis livrés ou échoués par un agent (bilan d'activité), le plus récent en premier. */
+export async function listAgentEvents(userId: string): Promise<AgentPackageEvent[]> {
+  const { data, error } = await supabase
+    .from('package_events')
+    .select(`id, new_status, created_at, package:packages(${PACKAGE_SELECT})`)
+    .eq('changed_by', userId)
+    .in('new_status', ['LIVRE', 'ECHEC'])
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as unknown as AgentPackageEvent[]
 }
 
 export async function getPackageEvents(packageId: string): Promise<PackageEvent[]> {

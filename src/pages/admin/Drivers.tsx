@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Trophy, Trash2 } from 'lucide-react'
+import { Plus, Trophy, Trash2, Printer } from 'lucide-react'
 import { listDrivers, updateDriverStatus } from '../../services/drivers'
 import { listAllPackages } from '../../services/packages'
 import { createUser, deleteUser } from '../../services/admin'
@@ -131,6 +131,12 @@ export default function AdminDrivers() {
                 <td className="px-4 py-3 text-gray-600">{d.active_packages_count}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-3">
+                    <Link
+                      to={`/admin/bilan/driver/${d.id}`}
+                      className="flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      <Printer className="h-4 w-4" /> Bilan
+                    </Link>
                     <button
                       onClick={() => toggleStatus(d)}
                       className="text-sm font-medium text-brand-600 hover:underline"

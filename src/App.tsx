@@ -19,6 +19,7 @@ import AdminAgents from './pages/admin/Agents'
 import AdminGareAgents from './pages/admin/GareAgents'
 import AdminFinance from './pages/admin/Finance'
 import AdminExpenses from './pages/admin/Expenses'
+import AdminBilan from './pages/admin/Bilan'
 import CompanyDashboard from './pages/company/Dashboard'
 import CompanyPackageDetail from './pages/company/PackageDetail'
 import CompanyFinance from './pages/company/Finance'
@@ -111,6 +112,15 @@ export default function App() {
               }
             />
           </Route>
+
+          <Route
+            path="/admin/bilan/:type/:id"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <AdminBilan />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/company"
