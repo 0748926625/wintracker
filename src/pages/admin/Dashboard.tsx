@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Package, Clock, PackageCheck, Truck, CheckCircle2, XCircle, RotateCcw, Printer } from 'lucide-react'
 import {
   ResponsiveContainer,
   PieChart,
@@ -87,6 +88,12 @@ export default function AdminDashboard() {
     return listCompaniesPackages(activeCompanyIds)
   }, [activeCompanyIds])
   const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
+  const bilanHref =
+    scope.type === 'ALL'
+      ? '/admin/bilan/all/all'
+      : scope.type === 'COMPANY'
+        ? `/admin/bilan/company/${scope.id}`
+        : `/admin/bilan/group/${scope.id}`
   const { packages, loading } = useRealtimePackages(
     fetcher,
     singleCompanyId ? 'company_id' : 'all',
@@ -158,6 +165,14 @@ export default function AdminDashboard() {
             </Select>
           )}
           <PeriodSwitcher pf={pf} />
+          {isSuperAdmin && (
+            <Link
+              to={bilanHref}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-brand-600 hover:bg-gray-50"
+            >
+              <Printer className="h-4 w-4" /> Bilan
+            </Link>
+          )}
         </div>
       </div>
 

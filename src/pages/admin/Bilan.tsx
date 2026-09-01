@@ -8,6 +8,7 @@ import { listCompanyGroups } from '../../services/groups'
 import { getDriver } from '../../services/drivers'
 import { getAgent } from '../../services/agents'
 import {
+  listAllPackages,
   listCompanyPackages,
   listCompaniesPackages,
   listDriverPackages,
@@ -20,9 +21,10 @@ import { StatCard } from '../../components/ui/StatCard'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
 
-type BilanType = 'group' | 'company' | 'driver' | 'agent'
+type BilanType = 'all' | 'group' | 'company' | 'driver' | 'agent'
 
 const TYPE_LABELS: Record<BilanType, string> = {
+  all: 'Global',
   group: 'Groupe',
   company: 'Compagnie',
   driver: 'Livreur',
@@ -59,7 +61,13 @@ export default function AdminBilan() {
     setError(null)
 
     async function load() {
-      if (type === 'company') {
+      if (type === 'all') {
+        const packages = await listAllPackages()
+        if (cancelled) return
+        setEntityName('Toutes les compagnies')
+        setEntitySubtitle(null)
+        buildPackageBilan(packages, [])
+      } else if (type === 'company') {
         const company = await getCompany(id!)
         const packages = await listCompanyPackages(id!)
         if (cancelled) return
