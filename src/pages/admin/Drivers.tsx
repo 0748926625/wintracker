@@ -18,7 +18,7 @@ export default function AdminDrivers() {
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<Driver | null>(null)
   const pf = usePeriodFilter()
-  const [statusFilter, setStatusFilter] = useState<'ALL' | PackageStatus>('ALL')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | PackageStatus>('LIVRE')
   const packagesFetcher = useCallback(() => listAllPackages(), [])
   const { packages } = useRealtimePackages(packagesFetcher, 'all', 'all')
 
@@ -79,12 +79,12 @@ export default function AdminDrivers() {
               onChange={(e) => setStatusFilter(e.target.value as 'ALL' | PackageStatus)}
               className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700"
             >
-              <option value="ALL">Tous les statuts</option>
               {(Object.keys(PACKAGE_STATUS_LABELS) as PackageStatus[]).map((s) => (
                 <option key={s} value={s}>
                   {PACKAGE_STATUS_LABELS[s]}
                 </option>
               ))}
+              <option value="ALL">Tous les statuts</option>
             </select>
           </div>
         </div>
