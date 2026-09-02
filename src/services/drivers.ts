@@ -24,14 +24,10 @@ export async function getDriver(id: string): Promise<Driver> {
 export async function listDrivers(): Promise<Driver[]> {
   const { data, error } = await supabase
     .from('drivers')
-    .select('*, profile:profiles(*), packages:packages(count)')
+    .select('*, profile:profiles(*)')
     .order('created_at', { ascending: false })
   if (error) throw error
-
-  return (data as unknown as Array<Driver & { packages: { count: number }[] }>).map((d) => ({
-    ...d,
-    active_packages_count: d.packages?.[0]?.count ?? 0,
-  }))
+  return data as unknown as Driver[]
 }
 
 export async function updateDriverStatus(id: string, status: DriverStatus): Promise<Driver> {

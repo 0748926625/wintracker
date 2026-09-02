@@ -61,7 +61,6 @@ export interface Driver {
   status: DriverStatus
   created_at: string
   profile?: Profile
-  active_packages_count?: number
 }
 
 export interface Package {
