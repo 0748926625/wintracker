@@ -95,7 +95,9 @@ export default function AdminDrivers() {
                 <th className="px-4 py-3 font-medium">Nom</th>
                 <th className="px-4 py-3 font-medium">Téléphone</th>
                 <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium">Colis affectés</th>
+                <th className="px-4 py-3 font-medium">
+                  Colis affectés{statusFilter !== 'ALL' && ` (${PACKAGE_STATUS_LABELS[statusFilter]})`}
+                </th>
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
