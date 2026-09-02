@@ -42,6 +42,7 @@ export interface CompanyInput {
   phone?: string
   email?: string
   address?: string
+  commune?: string
   group_id?: string | null
   commission_type?: CommissionType | null
   commission_rate?: number | null

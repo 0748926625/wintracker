@@ -32,7 +32,11 @@ import {
   type PackageStatus,
 } from '../../types/database'
 
-type Scope = { type: 'ALL' } | { type: 'COMPANY'; id: string } | { type: 'GROUP'; id: string }
+type Scope =
+  | { type: 'ALL' }
+  | { type: 'COMPANY'; id: string }
+  | { type: 'GROUP'; id: string }
+  | { type: 'COMMUNE'; id: string }
 
 const STATUS_HEX: Record<PackageStatus, string> = {
   EN_ATTENTE: '#6b7280',
@@ -70,16 +74,27 @@ export default function AdminDashboard() {
   function handleScopeChange(value: string) {
     if (value === 'ALL') setScope({ type: 'ALL' })
     else {
-      const [type, id] = value.split(':')
-      setScope({ type: type as 'COMPANY' | 'GROUP', id })
+      const sep = value.indexOf(':')
+      const type = value.slice(0, sep)
+      const id = value.slice(sep + 1)
+      setScope({ type: type as 'COMPANY' | 'GROUP' | 'COMMUNE', id })
     }
   }
+
+  const communes = useMemo(
+    () =>
+      Array.from(new Set(companies.map((c) => c.commune).filter((v): v is string => !!v))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [companies],
+  )
 
   const activeCompanyIds = useMemo(() => {
     if (!isSuperAdmin) return gareCompanyId ? [gareCompanyId] : null
     if (scope.type === 'ALL') return null
     if (scope.type === 'COMPANY') return [scope.id]
-    return companies.filter((c) => c.group_id === scope.id).map((c) => c.id)
+    if (scope.type === 'GROUP') return companies.filter((c) => c.group_id === scope.id).map((c) => c.id)
+    return companies.filter((c) => c.commune === scope.id).map((c) => c.id)
   }, [isSuperAdmin, gareCompanyId, scope, companies])
 
   const fetcher = useCallback(() => {
@@ -146,6 +161,15 @@ export default function AdminDashboard() {
               className="sm:max-w-xs"
             >
               <option value="ALL">Toutes les compagnies</option>
+              {communes.length > 0 && (
+                <optgroup label="Communes">
+                  {communes.map((commune) => (
+                    <option key={commune} value={`COMMUNE:${commune}`}>
+                      {commune}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
               {groups.length > 0 && (
                 <optgroup label="Groupes">
                   {groups.map((g) => (

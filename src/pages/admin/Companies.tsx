@@ -16,6 +16,7 @@ import { listCompanyPackages, deleteCompanyPackages } from '../../services/packa
 import { listCompanyGroups, createCompanyGroup, deleteCompanyGroup } from '../../services/groups'
 import { createUser, deleteUser } from '../../services/admin'
 import {
+  ABIDJAN_COMMUNES,
   COMMISSION_TYPE_LABELS,
   PRICE_OPTIONS,
   type CommissionType,
@@ -172,6 +173,7 @@ export default function AdminCompanies() {
                 />
               </th>
               <th className="px-4 py-3 font-medium">Nom</th>
+              <th className="px-4 py-3 font-medium">Commune</th>
               <th className="px-4 py-3 font-medium">Groupe</th>
               <th className="px-4 py-3 font-medium">Commission par colis</th>
               <th className="px-4 py-3 font-medium">Utilisateur(s)</th>
@@ -191,6 +193,7 @@ export default function AdminCompanies() {
                   />
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
+                <td className="px-4 py-3 text-gray-600">{c.commune || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{c.group?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-600">{commissionPerPackage(c)}</td>
                 <td className="px-4 py-3 text-gray-600">
@@ -245,7 +248,7 @@ export default function AdminCompanies() {
             ))}
             {companies.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                   Aucune compagnie pour le moment.
                 </td>
               </tr>
@@ -687,6 +690,7 @@ function CompanyModal({
     phone: company?.phone ?? '',
     email: company?.email ?? '',
     address: company?.address ?? '',
+    commune: company?.commune ?? '',
     group_id: company?.group_id ?? '',
     commission_type: company?.commission_type ?? null,
     commission_rate: company?.commission_rate ?? undefined,
@@ -767,6 +771,16 @@ function CompanyModal({
         </Field>
         <Field label="Adresse">
           <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+        </Field>
+        <Field label="Commune">
+          <Select value={form.commune} onChange={(e) => setForm({ ...form, commune: e.target.value })}>
+            <option value="">Sélectionner…</option>
+            {ABIDJAN_COMMUNES.map((commune) => (
+              <option key={commune} value={commune}>
+                {commune}
+              </option>
+            ))}
+          </Select>
         </Field>
 
         <Field label="Groupe (facultatif)">

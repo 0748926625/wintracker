@@ -36,6 +36,7 @@ export interface Company {
   phone: string | null
   email: string | null
   address: string | null
+  commune: string | null
   group_id: string | null
   commission_type: CommissionType | null
   commission_rate: number | null
@@ -156,6 +157,22 @@ export const PACKAGE_STATUS_COLORS: Record<PackageStatus, string> = {
 }
 
 export const PRICE_OPTIONS = [1000, 1500, 2000, 2500, 3000] as const
+
+export const ABIDJAN_COMMUNES = [
+  'Abobo',
+  'Adjamé',
+  'Anyama',
+  'Attécoubé',
+  'Bingerville',
+  'Cocody',
+  'Koumassi',
+  'Marcory',
+  'Plateau',
+  'Port-Bouët',
+  'Songon',
+  'Treichville',
+  'Yopougon',
+] as const
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   SALAIRE_AGENT: 'Salaire agent Wintrack',
