@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -8,12 +8,20 @@ import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import {
   listAllPackages,
   listCompanyPackages,
+  listCompaniesPackages,
   createPackage,
   type CreatePackageInput,
 } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
+import { listCompanyGroups } from '../../services/groups'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
-import { PRICE_OPTIONS, type Company, type GareAgent, type PackageStatus } from '../../types/database'
+import {
+  PRICE_OPTIONS,
+  type Company,
+  type CompanyGroup,
+  type GareAgent,
+  type PackageStatus,
+} from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
@@ -31,38 +39,58 @@ const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Retours', value: 'RETOUR' },
 ]
 
+type Scope = { type: 'ALL' } | { type: 'COMPANY'; id: string } | { type: 'GROUP'; id: string }
+
 export default function AdminPackages() {
   const { profile } = useAuth()
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
   const { activeCompanyId } = useGare()
-  const fetcher = useCallback(
-    () => (activeCompanyId ? listCompanyPackages(activeCompanyId) : listAllPackages()),
-    [activeCompanyId],
-  )
-  const { packages, loading } = useRealtimePackages(
-    fetcher,
-    activeCompanyId ? 'company_id' : 'all',
-    activeCompanyId ?? 'all',
-  )
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
-  const [companyFilter, setCompanyFilter] = useState('ALL')
+  const [scope, setScope] = useState<Scope>({ type: 'ALL' })
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [creating, setCreating] = useState(false)
   const pf = usePeriodFilter()
 
   useEffect(() => {
-    if (isSuperAdmin) listCompanies().then(setFilterCompanies)
+    if (isSuperAdmin) {
+      listCompanies().then(setFilterCompanies)
+      listCompanyGroups().then(setGroups)
+    }
   }, [isSuperAdmin])
+
+  function handleScopeChange(value: string) {
+    if (value === 'ALL') setScope({ type: 'ALL' })
+    else {
+      const [type, id] = value.split(':')
+      setScope({ type: type as 'COMPANY' | 'GROUP', id })
+    }
+  }
+
+  const activeCompanyIds = useMemo(() => {
+    if (!isSuperAdmin) return activeCompanyId ? [activeCompanyId] : null
+    if (scope.type === 'ALL') return null
+    if (scope.type === 'COMPANY') return [scope.id]
+    return filterCompanies.filter((c) => c.group_id === scope.id).map((c) => c.id)
+  }, [isSuperAdmin, activeCompanyId, scope, filterCompanies])
+
+  const fetcher = useCallback(() => {
+    if (!activeCompanyIds) return listAllPackages()
+    if (activeCompanyIds.length === 1) return listCompanyPackages(activeCompanyIds[0])
+    return listCompaniesPackages(activeCompanyIds)
+  }, [activeCompanyIds])
+  const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
+  const { packages, loading } = useRealtimePackages(
+    fetcher,
+    singleCompanyId ? 'company_id' : 'all',
+    singleCompanyId ?? 'all',
+  )
 
   if (loading) return <PageLoader />
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
-  const byCompany =
-    isSuperAdmin && companyFilter !== 'ALL'
-      ? byStatus.filter((p) => p.company_id === companyFilter)
-      : byStatus
-  const byPeriod = byCompany.filter((p) => pf.inRange(p.created_at))
+  const byPeriod = byStatus.filter((p) => pf.inRange(p.created_at))
   const query = search.trim().toLowerCase()
   const filtered = query
     ? byPeriod.filter(
@@ -109,16 +137,27 @@ export default function AdminPackages() {
 
         {isSuperAdmin && (
           <Select
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
+            value={scope.type === 'ALL' ? 'ALL' : `${scope.type}:${scope.id}`}
+            onChange={(e) => handleScopeChange(e.target.value)}
             className="w-full sm:w-auto"
           >
             <option value="ALL">Toutes les compagnies</option>
-            {filterCompanies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {groups.length > 0 && (
+              <optgroup label="Groupes">
+                {groups.map((g) => (
+                  <option key={g.id} value={`GROUP:${g.id}`}>
+                    {g.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="Compagnies">
+              {filterCompanies.map((c) => (
+                <option key={c.id} value={`COMPANY:${c.id}`}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
           </Select>
         )}
 
