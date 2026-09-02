@@ -69,43 +69,7 @@ export default function AdminDrivers() {
         </Button>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="flex items-center gap-2 font-semibold text-gray-900">
-            <Trophy className="h-4 w-4 text-amber-500" /> Meilleurs livreurs
-          </h2>
-          <PeriodSwitcher pf={pf} />
-        </div>
-        {leaderboard.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-400">
-            Aucune livraison sur cette période.
-          </p>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {leaderboard.map((row, i) => (
-              <li key={row.driver.id} className="flex items-center justify-between py-2.5">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
-                    {i + 1}
-                  </span>
-                  <Link
-                    to={`/admin/drivers/${row.driver.id}`}
-                    className="font-medium text-gray-900 hover:text-brand-600"
-                  >
-                    {row.driver.profile?.name}
-                  </Link>
-                </div>
-                <div className="text-right text-sm">
-                  <div className="font-semibold text-brand-600">{row.cash.toLocaleString('fr-FR')} F</div>
-                  <div className="text-xs text-gray-400">{row.delivered} livré(s)</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-gray-200 bg-white">
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white">
         <div className="flex flex-col gap-3 border-b border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-gray-900">Colis affectés</h2>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -191,6 +155,42 @@ export default function AdminDrivers() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="flex items-center gap-2 font-semibold text-gray-900">
+            <Trophy className="h-4 w-4 text-amber-500" /> Meilleurs livreurs
+          </h2>
+          <PeriodSwitcher pf={pf} />
+        </div>
+        {leaderboard.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">
+            Aucune livraison sur cette période.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {leaderboard.map((row, i) => (
+              <li key={row.driver.id} className="flex items-center justify-between py-2.5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+                    {i + 1}
+                  </span>
+                  <Link
+                    to={`/admin/drivers/${row.driver.id}`}
+                    className="font-medium text-gray-900 hover:text-brand-600"
+                  >
+                    {row.driver.profile?.name}
+                  </Link>
+                </div>
+                <div className="text-right text-sm">
+                  <div className="font-semibold text-brand-600">{row.cash.toLocaleString('fr-FR')} F</div>
+                  <div className="text-xs text-gray-400">{row.delivered} livré(s)</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {creating && (
