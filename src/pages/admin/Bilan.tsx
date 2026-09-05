@@ -15,6 +15,7 @@ import {
   listAgentEvents,
 } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
+import { effectiveDate } from '../../lib/packageDate'
 import type { Package, PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
@@ -101,7 +102,7 @@ export default function AdminBilan() {
     }
 
     function buildPackageBilan(packages: Package[], _companyIds: string[]) {
-      const period = packages.filter((p) => pf.inRange(p.created_at))
+      const period = packages.filter((p) => pf.inRange(effectiveDate(p)))
       const livres = period.filter((p) => p.status === 'LIVRE')
       const cash = livres.reduce((sum, p) => sum + (p.price ?? 0), 0)
       const commission = livres.reduce((sum, p) => sum + (commissionForPackage(p, p.company ?? null) ?? 0), 0)
@@ -120,13 +121,13 @@ export default function AdminBilan() {
           recipient: p.recipient_name,
           price: p.price,
           status: p.status,
-          date: p.created_at,
+          date: effectiveDate(p),
         })),
       )
     }
 
     function buildDriverBilan(packages: Package[]) {
-      const period = packages.filter((p) => pf.inRange(p.created_at))
+      const period = packages.filter((p) => pf.inRange(effectiveDate(p)))
       const livres = period.filter((p) => p.status === 'LIVRE')
       const retours = period.filter((p) => p.status === 'RETOUR')
       const echecs = period.filter((p) => p.status === 'ECHEC')
@@ -146,7 +147,7 @@ export default function AdminBilan() {
           recipient: p.recipient_name,
           price: p.price,
           status: p.status,
-          date: p.created_at,
+          date: effectiveDate(p),
         })),
       )
     }

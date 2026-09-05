@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { effectiveDate } from '../../lib/packageDate'
 import { listAllPackages, listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
 
   if (loading) return <PageLoader />
 
-  const scoped = packages.filter((p) => pf.inRange(p.created_at))
+  const scoped = packages.filter((p) => pf.inRange(effectiveDate(p)))
   const count = (status: PackageStatus) => scoped.filter((p) => p.status === status).length
 
   const statusData = (Object.keys(PACKAGE_STATUS_LABELS) as PackageStatus[])
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
     const { start, end } = dayBounds(date)
     const delivered = packages.filter((p) => {
       if (p.status !== 'LIVRE') return false
-      const d = new Date(p.created_at)
+      const d = new Date(effectiveDate(p))
       return d >= start && d <= end
     })
     return {

@@ -30,6 +30,12 @@ export default function CompanyPackageDetail() {
           <Info label="Code colis" value={pkg.external_reference} />
           <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
           <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
+          {pkg.count_date && (
+            <Info
+              label="Date de prise en compte (bilans)"
+              value={new Date(pkg.count_date).toLocaleDateString('fr-FR')}
+            />
+          )}
           <Info label="Enregistré par" value={creatorLabel(pkg.creator)} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Livreur" value={pkg.driver?.profile?.name} />

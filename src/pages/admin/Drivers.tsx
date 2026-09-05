@@ -6,6 +6,7 @@ import { listAllPackages } from '../../services/packages'
 import { createUser, deleteUser } from '../../services/admin'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { effectiveDate } from '../../lib/packageDate'
 import { PACKAGE_STATUS_LABELS, type Driver, type PackageStatus } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Button } from '../../components/ui/Button'
@@ -40,7 +41,7 @@ export default function AdminDrivers() {
   const leaderboard = drivers
     .map((d) => {
       const livres = packages.filter(
-        (p) => p.driver_id === d.id && p.status === 'LIVRE' && pf.inRange(p.created_at),
+        (p) => p.driver_id === d.id && p.status === 'LIVRE' && pf.inRange(effectiveDate(p)),
       )
       return {
         driver: d,
@@ -55,7 +56,7 @@ export default function AdminDrivers() {
   const assignedCounts = new Map<string, number>()
   packages.forEach((p) => {
     if (!p.driver_id) return
-    if (!pf.inRange(p.created_at)) return
+    if (!pf.inRange(effectiveDate(p))) return
     if (statusFilter !== 'ALL' && p.status !== statusFilter) return
     assignedCounts.set(p.driver_id, (assignedCounts.get(p.driver_id) ?? 0) + 1)
   })

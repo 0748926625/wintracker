@@ -89,6 +89,7 @@ export interface Package {
   updated_at: string
   delivered_at: string | null
   deleted_at: string | null
+  count_date: string | null
 
   company?: Company
   driver?: Driver

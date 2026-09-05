@@ -15,6 +15,7 @@ import {
 import { listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
+import { effectiveDate } from '../../lib/packageDate'
 import {
   PRICE_OPTIONS,
   type Company,
@@ -105,7 +106,7 @@ export default function AdminPackages() {
   if (loading) return <PageLoader />
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
-  const byPeriod = byStatus.filter((p) => pf.inRange(p.created_at))
+  const byPeriod = byStatus.filter((p) => pf.inRange(effectiveDate(p)))
   const query = search.trim().toLowerCase()
   const filtered = query
     ? byPeriod.filter(
@@ -217,7 +218,7 @@ export default function AdminPackages() {
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(p.created_at).toLocaleDateString('fr-FR')}
+                  {new Date(effectiveDate(p)).toLocaleDateString('fr-FR')}
                 </td>
               </tr>
             ))}

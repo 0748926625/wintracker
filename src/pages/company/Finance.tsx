@@ -4,6 +4,7 @@ import { useCompanyGroup } from '../../hooks/useCompanyGroup'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { listCompanyPackages, listCompaniesPackages } from '../../services/packages'
 import { commissionForPackage } from '../../lib/commission'
+import { effectiveDate } from '../../lib/packageDate'
 import type { Package } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatCard } from '../../components/ui/StatCard'
@@ -37,7 +38,7 @@ export default function CompanyFinance() {
   if (groupLoading || loading) return <PageLoader />
 
   const delivered = packages
-    .filter((p) => p.status === 'LIVRE' && pf.inRange(p.created_at))
+    .filter((p) => p.status === 'LIVRE' && pf.inRange(effectiveDate(p)))
     .filter((p) => selectedBranches.size === 0 || selectedBranches.has(p.company_id))
   const earnings = delivered.reduce(
     (sum, p) => sum + (commissionForPackage(p, companyById.get(p.company_id) ?? null) ?? 0),

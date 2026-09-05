@@ -163,6 +163,36 @@ export async function updatePackage(
   return data as unknown as Package
 }
 
+/**
+ * Corrige la date de création (d'enregistrement) d'un colis déjà créé.
+ * Réservé SUPER_ADMIN — bloqué pour agent/livreur par le trigger DB.
+ */
+export async function setCreatedAt(packageId: string, createdAt: string): Promise<Package> {
+  const { data, error } = await supabase
+    .from('packages')
+    .update({ created_at: createdAt })
+    .eq('id', packageId)
+    .select(PACKAGE_SELECT)
+    .single()
+  if (error) throw error
+  return data as unknown as Package
+}
+
+/**
+ * Date de prise en compte pour les bilans/classements (remplace created_at).
+ * Réservé admin/agent — bloqué pour les livreurs par le trigger DB.
+ */
+export async function setCountDate(packageId: string, countDate: string | null): Promise<Package> {
+  const { data, error } = await supabase
+    .from('packages')
+    .update({ count_date: countDate })
+    .eq('id', packageId)
+    .select(PACKAGE_SELECT)
+    .single()
+  if (error) throw error
+  return data as unknown as Package
+}
+
 export async function assignDriver(packageId: string, driverId: string | null): Promise<Package> {
   const { data, error } = await supabase
     .from('packages')

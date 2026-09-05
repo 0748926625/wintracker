@@ -7,6 +7,8 @@ import { useRealtimePackage } from '../../hooks/useRealtimePackage'
 import {
   assignDriver,
   updatePackage,
+  setCountDate,
+  setCreatedAt,
   softDeletePackage,
   restorePackage,
   purgePackage,
@@ -34,6 +36,8 @@ export default function AdminPackageDetail() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [assigning, setAssigning] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [editingCountDate, setEditingCountDate] = useState(false)
+  const [editingCreatedAt, setEditingCreatedAt] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [purging, setPurging] = useState(false)
   const [restoring, setRestoring] = useState(false)
@@ -48,6 +52,8 @@ export default function AdminPackageDetail() {
   if (loading || !pkg) return <PageLoader />
 
   const isTrashed = pkg.deleted_at != null
+  const hasBeenReturned = events.some((e) => e.new_status === 'RETOUR')
+  const showCountDate = hasBeenReturned && pkg.status === 'LIVRE'
 
   async function handleAssign(driverId: string) {
     setAssigning(true)
@@ -131,7 +137,22 @@ export default function AdminPackageDetail() {
           <Info label="Compagnie" value={pkg.company?.name} />
           <Info label="Code colis" value={pkg.external_reference} />
           <Info label="N° de suivi (interne)" value={pkg.tracking_number} />
-          <Info label="Date d'enregistrement" value={new Date(pkg.created_at).toLocaleDateString('fr-FR')} />
+          <div>
+            <dt className="text-gray-400">Date d'enregistrement</dt>
+            <dd className="flex items-center gap-1.5 font-medium text-gray-900">
+              {new Date(pkg.created_at).toLocaleDateString('fr-FR')}
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setEditingCreatedAt(true)}
+                  title="Modifier la date de création"
+                  className="text-gray-300 hover:text-gray-500"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+            </dd>
+          </div>
           <Info label="Enregistré par" value={creatorLabel(pkg.creator)} />
           <Info label="Agent de la gare" value={pkg.agent?.name} />
           <Info label="Tarif" value={pkg.price ? `${pkg.price} F` : null} />
@@ -165,6 +186,30 @@ export default function AdminPackageDetail() {
             ))}
           </Select>
         </div>
+
+        {showCountDate && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-400">Date de prise en compte (bilans/classements)</p>
+                <p className="font-medium text-gray-900">
+                  {new Date(pkg.count_date ?? pkg.created_at).toLocaleDateString('fr-FR')}
+                  {pkg.count_date && (
+                    <span className="ml-2 text-xs font-normal text-amber-600">
+                      (corrigée, au lieu du {new Date(pkg.created_at).toLocaleDateString('fr-FR')})
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingCountDate(true)}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Modifier
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
@@ -185,6 +230,28 @@ export default function AdminPackageDetail() {
           onClose={() => setEditing(false)}
           onSaved={async () => {
             setEditing(false)
+            await refresh()
+          }}
+        />
+      )}
+
+      {editingCountDate && (
+        <CountDateModal
+          pkg={pkg}
+          onClose={() => setEditingCountDate(false)}
+          onSaved={async () => {
+            setEditingCountDate(false)
+            await refresh()
+          }}
+        />
+      )}
+
+      {editingCreatedAt && (
+        <CreatedAtModal
+          pkg={pkg}
+          onClose={() => setEditingCreatedAt(false)}
+          onSaved={async () => {
+            setEditingCreatedAt(false)
             await refresh()
           }}
         />
@@ -249,6 +316,122 @@ function DeletePackageModal({
           Supprimer
         </Button>
       </div>
+    </Modal>
+  )
+}
+
+function CountDateModal({
+  pkg,
+  onClose,
+  onSaved,
+}: {
+  pkg: Package
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState((pkg.count_date ?? pkg.created_at).slice(0, 10))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await setCountDate(pkg.id, new Date(`${value}T00:00:00`).toISOString())
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+      setLoading(false)
+    }
+  }
+
+  async function handleReset() {
+    setLoading(true)
+    setError(null)
+    try {
+      await setCountDate(pkg.id, null)
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Date de prise en compte" onClose={onClose}>
+      <p className="mb-4 text-sm text-gray-600">
+        Ce colis a été relivré après un retour. Choisissez la date à laquelle il doit compter dans
+        les bilans et le classement des livreurs, à la place de sa date d'enregistrement (
+        {new Date(pkg.created_at).toLocaleDateString('fr-FR')}).
+      </p>
+      <form onSubmit={handleSubmit}>
+        <Field label="Date de prise en compte">
+          <Input type="date" required value={value} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        <div className="flex gap-3">
+          {pkg.count_date && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              loading={loading}
+              onClick={handleReset}
+            >
+              Réinitialiser
+            </Button>
+          )}
+          <Button type="submit" className="flex-1" loading={loading}>
+            Enregistrer
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function CreatedAtModal({
+  pkg,
+  onClose,
+  onSaved,
+}: {
+  pkg: Package
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [value, setValue] = useState(pkg.created_at.slice(0, 10))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await setCreatedAt(pkg.id, new Date(`${value}T00:00:00`).toISOString())
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Modifier la date de création" onClose={onClose}>
+      <p className="mb-4 text-sm text-gray-600">
+        Corrige la date d'enregistrement de ce colis (erreur de saisie, import…). Réservé aux super
+        admins — cette date est utilisée partout où aucune date de prise en compte n'est définie.
+      </p>
+      <form onSubmit={handleSubmit}>
+        <Field label="Date de création">
+          <Input type="date" required value={value} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        <Button type="submit" className="w-full" loading={loading}>
+          Enregistrer
+        </Button>
+      </form>
     </Modal>
   )
 }
