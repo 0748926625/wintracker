@@ -359,7 +359,7 @@ function CountDateModal({
   }
 
   return (
-    <Modal title="Date de prise en compte" onClose={onClose}>
+    <Modal title="Date de prise en compte" onClose={onClose} centered>
       <p className="mb-4 text-sm text-gray-600">
         Ce colis a été relivré après un retour. Choisissez la date à laquelle il doit compter dans
         les bilans et le classement des livreurs, à la place de sa date d'enregistrement (
@@ -418,7 +418,7 @@ function CreatedAtModal({
   }
 
   return (
-    <Modal title="Modifier la date de création" onClose={onClose}>
+    <Modal title="Modifier la date de création" onClose={onClose} centered>
       <p className="mb-4 text-sm text-gray-600">
         Corrige la date d'enregistrement de ce colis (erreur de saisie, import…). Réservé aux super
         admins — cette date est utilisée partout où aucune date de prise en compte n'est définie.
