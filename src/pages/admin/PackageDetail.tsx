@@ -146,7 +146,7 @@ export default function AdminPackageDetail() {
                   type="button"
                   onClick={() => setEditingCreatedAt(true)}
                   title="Modifier la date de création"
-                  className="text-gray-300 hover:text-gray-500"
+                  className="text-red-500 hover:text-red-600"
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
