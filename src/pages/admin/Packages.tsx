@@ -9,15 +9,19 @@ import {
   listAllPackages,
   listCompanyPackages,
   listCompaniesPackages,
-  getPackage,
   createPackage,
+  quickSetStatus,
   type CreatePackageInput,
 } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
 import { effectiveDate } from '../../lib/packageDate'
+import { reachableStatuses } from '../../lib/statusTransitions'
 import {
+  FAILURE_REASONS,
+  PACKAGE_STATUS_COLORS,
+  PACKAGE_STATUS_LABELS,
   PRICE_OPTIONS,
   type Company,
   type CompanyGroup,
@@ -31,7 +35,6 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select, Textarea } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
-import { PackageStatusActions } from '../../components/PackageStatusActions'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -59,7 +62,6 @@ export default function AdminPackages() {
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [creating, setCreating] = useState(false)
-  const [statusPackage, setStatusPackage] = useState<Package | null>(null)
   const pf = usePeriodFilter()
 
   useEffect(() => {
@@ -118,11 +120,9 @@ export default function AdminPackages() {
 
   if (loading) return <PageLoader />
 
-  /** Recharge le colis modifié sans attendre la notification temps réel. */
-  async function handleStatusChanged() {
-    const fresh = await getPackage(statusPackage!.id)
+  /** Applique le colis modifié sans attendre la notification temps réel. */
+  function handleStatusChanged(fresh: Package) {
     setPackages((prev) => prev.map((p) => (p.id === fresh.id ? fresh : p)))
-    setStatusPackage(null)
   }
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
@@ -234,20 +234,7 @@ export default function AdminPackages() {
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
                 <td className="px-4 py-3 text-gray-600">{p.price ? `${p.price} F` : '—'}</td>
                 <td className="px-4 py-3">
-                  {p.status === 'LIVRE' ? (
-                    <StatusBadge status={p.status} />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setStatusPackage(p)}
-                      title="Changer le statut"
-                      className="rounded-full hover:opacity-80"
-                    >
-                      <StatusBadge status={p.status} className="gap-1">
-                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                      </StatusBadge>
-                    </button>
-                  )}
+                  <QuickStatusSelect pkg={p} onChanged={handleStatusChanged} />
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
@@ -266,22 +253,64 @@ export default function AdminPackages() {
         </table>
       </div>
 
-      {statusPackage && (
-        <Modal
-          title={`Statut — ${statusPackage.external_reference || statusPackage.tracking_number}`}
-          onClose={() => setStatusPackage(null)}
-          centered
-        >
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
-            Statut actuel : <StatusBadge status={statusPackage.status} />
-          </div>
-          <PackageStatusActions pkg={statusPackage} onChanged={handleStatusChanged} />
-        </Modal>
-      )}
-
       {creating && (
         <CreatePackageModal onClose={() => setCreating(false)} onSaved={() => setCreating(false)} />
       )}
+    </div>
+  )
+}
+
+/**
+ * Badge de statut transformé en liste déroulante : propose tous les statuts
+ * atteignables et les applique immédiatement, sans confirmation.
+ */
+function QuickStatusSelect({ pkg, onChanged }: { pkg: Package; onChanged: (fresh: Package) => void }) {
+  const [busy, setBusy] = useState(false)
+  const targets = reachableStatuses(pkg.status)
+  if (targets.length === 0) return <StatusBadge status={pkg.status} />
+
+  async function handleChange(value: string) {
+    const [target, reason] = value.split('|') as [PackageStatus, string | undefined]
+    setBusy(true)
+    try {
+      onChanged(await quickSetStatus(pkg, target, reason))
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Erreur lors du changement de statut')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="relative inline-flex">
+      <select
+        value=""
+        disabled={busy}
+        onChange={(e) => handleChange(e.target.value)}
+        title="Changer le statut"
+        className={`cursor-pointer appearance-none rounded-full py-1 pl-3 pr-7 text-sm font-semibold disabled:cursor-wait disabled:opacity-60 ${PACKAGE_STATUS_COLORS[pkg.status]}`}
+      >
+        <option value="" disabled hidden>
+          {busy ? 'Mise à jour…' : PACKAGE_STATUS_LABELS[pkg.status]}
+        </option>
+        {targets
+          .filter((t) => t !== 'ECHEC')
+          .map((t) => (
+            <option key={t} value={t} className="bg-white text-gray-900">
+              {PACKAGE_STATUS_LABELS[t]}
+            </option>
+          ))}
+        {targets.includes('ECHEC') && (
+          <optgroup label="Échec" className="bg-white text-gray-900">
+            {FAILURE_REASONS.map((r) => (
+              <option key={r} value={`ECHEC|${r}`}>
+                Échec — {r}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-60" />
     </div>
   )
 }

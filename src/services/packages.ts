@@ -1,6 +1,7 @@
 import { fetchAll, supabase } from '../lib/supabase'
 import type { AgentPackageEvent, Package, PackageEvent, PackageStatus } from '../types/database'
 import { getCurrentLocation, type GeoPoint } from '../lib/geolocation'
+import { statusPath } from '../lib/statusTransitions'
 
 const PACKAGE_SELECT = `*, company:companies(*, commission_tiers:company_commission_tiers(*)), driver:drivers(*, profile:profiles(*)), agent:gare_agents(*), creator:profiles!packages_created_by_fkey(*)`
 
@@ -309,4 +310,29 @@ export async function uploadDeliveryPhoto(packageId: string, file: File): Promis
   if (error) throw error
   const { data } = supabase.storage.from('delivery-proofs').getPublicUrl(path)
   return data.publicUrl
+}
+
+/**
+ * Amène un colis directement au statut voulu depuis la liste (admin/agent, sans
+ * GPS), en enchaînant les étapes intermédiaires exigées par la base : chaque
+ * étape reste tracée dans l'historique. La livraison est attribuée au
+ * destinataire prévu ; un passage par ÉCHEC exige `failureReason`.
+ */
+export async function quickSetStatus(
+  pkg: Package,
+  target: PackageStatus,
+  failureReason?: string,
+): Promise<Package> {
+  const path = statusPath(pkg.status, target)
+  if (!path) throw new Error('Changement de statut impossible depuis le statut actuel.')
+  if (path.includes('ECHEC') && !failureReason) throw new Error("Motif d'échec requis.")
+
+  let current = pkg
+  for (const step of path) {
+    if (step === 'RECUPERE') current = await markRecupere(pkg.id, false)
+    else if (step === 'LIVRE') current = await confirmDelivery(pkg.id, { receiver_name: pkg.recipient_name }, false)
+    else if (step === 'ECHEC') current = await declareFailure(pkg.id, failureReason!)
+    else current = await setStatus(pkg.id, step)
+  }
+  return current
 }
