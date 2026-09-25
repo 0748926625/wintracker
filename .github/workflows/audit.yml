@@ -1,0 +1,29 @@
+name: Audit des chiffres
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Recalcul des chiffres
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TZ: Africa/Abidjan
+        run: node scripts/audit-finances.mjs
+
+      - name: Rapport
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-finances
+          path: audit-finances.md

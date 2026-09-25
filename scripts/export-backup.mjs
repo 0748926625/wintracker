@@ -4,14 +4,7 @@
 // clé service_role (accès complet, contourne les RLS) fournie via variable
 // d'environnement — jamais commitée.
 import fs from 'node:fs'
-
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis.')
-  process.exit(1)
-}
+import { countTable, fetchTable } from './supabase-rest.mjs'
 
 // Les comptes de connexion (auth.users) ne sont pas exportables via l'API
 // REST et ne sont donc pas inclus — cette sauvegarde couvre les données
@@ -30,39 +23,18 @@ const TABLES = [
   'expenses',
 ]
 
-// Tri stable pour la pagination, pour les tables sans colonne `id`.
-const ORDER_KEYS = {
-  company_commission_tiers: 'company_id',
-  agent_companies: 'agent_profile_id',
-}
-
-const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }
-
-// Supabase plafonne chaque réponse à 1000 lignes sans erreur : on enchaîne
-// les pages jusqu'à en recevoir une incomplète.
-const PAGE_SIZE = 1000
-
-async function fetchTable(table) {
-  const order = ORDER_KEYS[table] ?? 'id'
-  const rows = []
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const url = `${SUPABASE_URL}/rest/v1/${table}?select=*&order=${order}&limit=${PAGE_SIZE}&offset=${offset}`
-    const res = await fetch(url, { headers })
-    if (!res.ok) {
-      throw new Error(`Échec de l'export de "${table}" : ${res.status} ${await res.text()}`)
-    }
-    const page = await res.json()
-    rows.push(...page)
-    if (page.length < PAGE_SIZE) return rows
-  }
-}
-
 async function main() {
   const tables = {}
   const counts = {}
+  const warnings = []
 
   for (const table of TABLES) {
     const data = await fetchTable(table)
+    const expected = await countTable(table)
+    // Un écart peut venir d'une saisie pendant l'export ; on le signale sans bloquer l'envoi.
+    if (data.length !== expected) {
+      warnings.push(`⚠ ${table} : ${data.length} lignes exportées, ${expected} en base au moment du contrôle`)
+    }
     tables[table] = data
     counts[table] = data.length
   }
@@ -81,6 +53,7 @@ async function main() {
     `${total} enregistrement(s) au total :`,
     ...Object.entries(counts).map(([t, n]) => `- ${t} : ${n}`),
     '',
+    ...(warnings.length ? [...warnings, ''] : []),
     "Les comptes de connexion (emails, mots de passe) ne sont pas inclus dans cette sauvegarde.",
   ]
   fs.writeFileSync('backup-summary.txt', summaryLines.join('\n'))
