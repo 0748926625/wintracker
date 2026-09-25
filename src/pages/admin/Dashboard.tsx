@@ -110,10 +110,19 @@ export default function AdminDashboard() {
       : scope.type === 'COMPANY'
         ? `/admin/bilan/company/${scope.id}`
         : `/admin/bilan/group/${scope.id}`
-  const { packages, loading } = useRealtimePackages(
+  const { packages: livePackages, loading } = useRealtimePackages(
     fetcher,
     singleCompanyId ? 'company_id' : 'all',
     singleCompanyId ?? 'all',
+  )
+  // Sur plusieurs compagnies, l'abonnement temps réel écoute tous les colis :
+  // on écarte ceux qui arrivent d'une compagnie hors du périmètre choisi.
+  const packages = useMemo(
+    () =>
+      activeCompanyIds
+        ? livePackages.filter((p) => activeCompanyIds.includes(p.company_id))
+        : livePackages,
+    [livePackages, activeCompanyIds],
   )
 
   const pf = usePeriodFilter()

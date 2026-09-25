@@ -97,10 +97,19 @@ export default function AdminPackages() {
     return listCompaniesPackages(activeCompanyIds)
   }, [activeCompanyIds])
   const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
-  const { packages, loading } = useRealtimePackages(
+  const { packages: livePackages, loading } = useRealtimePackages(
     fetcher,
     singleCompanyId ? 'company_id' : 'all',
     singleCompanyId ?? 'all',
+  )
+  // Sur plusieurs compagnies, l'abonnement temps réel écoute tous les colis :
+  // on écarte ceux qui arrivent d'une compagnie hors du périmètre choisi.
+  const packages = useMemo(
+    () =>
+      activeCompanyIds
+        ? livePackages.filter((p) => activeCompanyIds.includes(p.company_id))
+        : livePackages,
+    [livePackages, activeCompanyIds],
   )
 
   if (loading) return <PageLoader />

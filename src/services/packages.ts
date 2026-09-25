@@ -120,14 +120,18 @@ export async function getPackage(id: string): Promise<Package> {
   return data as unknown as Package
 }
 
-/** Colis livrés ou échoués par un agent (bilan d'activité), le plus récent en premier. */
+/**
+ * Colis livrés ou échoués par un agent (bilan d'activité), le plus récent en premier.
+ * Les colis à la corbeille sont exclus, comme dans tous les autres bilans.
+ */
 export async function listAgentEvents(userId: string): Promise<AgentPackageEvent[]> {
   const data = await fetchAll(() =>
     supabase
       .from('package_events')
-      .select(`id, new_status, created_at, package:packages(${PACKAGE_SELECT})`)
+      .select(`id, new_status, created_at, package:packages!inner(${PACKAGE_SELECT})`)
       .eq('changed_by', userId)
       .in('new_status', ['LIVRE', 'ECHEC'])
+      .is('package.deleted_at', null)
       .order('created_at', { ascending: false })
       .order('id'),
   )
