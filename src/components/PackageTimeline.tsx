@@ -20,8 +20,12 @@ export function PackageTimeline({ events }: { events: PackageEvent[] }) {
   return (
     <ol className="relative border-l-2 border-gray-200 pl-4">
       {events.map((event) => (
-        <li key={event.id} className="mb-6 last:mb-0">
-          <span className="absolute -left-[9px] mt-1 h-4 w-4 rounded-full border-2 border-white bg-brand-600" />
+        <li key={event.id} className={`mb-6 last:mb-0 ${event.cancelled_at ? 'opacity-50' : ''}`}>
+          <span
+            className={`absolute -left-[9px] mt-1 h-4 w-4 rounded-full border-2 border-white ${
+              event.cancelled_at ? 'bg-gray-300' : event.is_correction ? 'bg-amber-500' : 'bg-brand-600'
+            }`}
+          />
           <p className="text-xs font-medium text-gray-400">
             {new Date(event.created_at).toLocaleDateString('fr-FR', {
               day: '2-digit',
@@ -34,7 +38,19 @@ export function PackageTimeline({ events }: { events: PackageEvent[] }) {
             })}
           </p>
           <p className="font-semibold text-gray-900">
-            {STEP_LABELS[event.new_status] ?? PACKAGE_STATUS_LABELS[event.new_status]}
+            <span className={event.cancelled_at ? 'line-through' : ''}>
+              {STEP_LABELS[event.new_status] ?? PACKAGE_STATUS_LABELS[event.new_status]}
+            </span>
+            {event.is_correction && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                Correction
+              </span>
+            )}
+            {event.cancelled_at && (
+              <span className="ml-2 text-xs font-normal text-gray-500">
+                (annulée le {new Date(event.cancelled_at).toLocaleDateString('fr-FR')})
+              </span>
+            )}
           </p>
           {event.comment && <p className="text-sm text-gray-500">{event.comment}</p>}
           {event.latitude != null && event.longitude != null && (

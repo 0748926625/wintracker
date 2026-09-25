@@ -275,7 +275,10 @@ async function main() {
   listSample(trashedDelivered, (p) => `${code(p)} — ${companyName(p.company_id)} — ${p.price} F — mis à la corbeille le ${dateFr(p.deleted_at)}`)
 
   // Bilan agent : basé sur les événements LIVRE/ECHEC enregistrés par l'agent.
-  const agentEvents = data.package_events.filter((e) => ['LIVRE', 'ECHEC'].includes(e.new_status))
+  // Les étapes annulées par une correction et les corrections elles-mêmes sont exclues des bilans.
+  const agentEvents = data.package_events.filter(
+    (e) => ['LIVRE', 'ECHEC'].includes(e.new_status) && !e.cancelled_at && !e.is_correction,
+  )
   const livreEventsByPkg = new Map()
   for (const e of agentEvents.filter((e) => e.new_status === 'LIVRE')) {
     livreEventsByPkg.set(e.package_id, (livreEventsByPkg.get(e.package_id) ?? 0) + 1)

@@ -120,6 +120,10 @@ export interface PackageEvent {
   latitude: number | null
   longitude: number | null
   created_at: string
+  /** Étape défaite par une correction de statut (conservée pour la traçabilité). */
+  cancelled_at: string | null
+  /** Événement créé par une correction de statut d'un super admin. */
+  is_correction: boolean
 }
 
 /** Événement de traitement d'un colis par un agent, avec le colis concerné. */

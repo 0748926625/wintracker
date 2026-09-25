@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Trash2, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, RotateCcw, Undo2 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
 import { useRealtimePackage } from '../../hooks/useRealtimePackage'
@@ -12,6 +12,7 @@ import {
   softDeletePackage,
   restorePackage,
   purgePackage,
+  correctPackageStatus,
   type CreatePackageInput,
 } from '../../services/packages'
 import { listDrivers } from '../../services/drivers'
@@ -19,7 +20,15 @@ import { listCompanies } from '../../services/companies'
 import { listGareAgents } from '../../services/gareAgents'
 import { commissionForPackage } from '../../lib/commission'
 import { creatorLabel } from '../../lib/packageCreator'
-import { PRICE_OPTIONS, type Company, type Driver, type GareAgent, type Package } from '../../types/database'
+import {
+  PACKAGE_STATUS_LABELS,
+  PRICE_OPTIONS,
+  type Company,
+  type Driver,
+  type GareAgent,
+  type Package,
+  type PackageStatus,
+} from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { PackageTimeline } from '../../components/PackageTimeline'
@@ -41,6 +50,7 @@ export default function AdminPackageDetail() {
   const [deleting, setDeleting] = useState(false)
   const [purging, setPurging] = useState(false)
   const [restoring, setRestoring] = useState(false)
+  const [correctingStatus, setCorrectingStatus] = useState(false)
 
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
   const canDelete = isSuperAdmin || profile?.can_delete_packages === true
@@ -52,7 +62,7 @@ export default function AdminPackageDetail() {
   if (loading || !pkg) return <PageLoader />
 
   const isTrashed = pkg.deleted_at != null
-  const hasBeenReturned = events.some((e) => e.new_status === 'RETOUR')
+  const hasBeenReturned = events.some((e) => e.new_status === 'RETOUR' && !e.cancelled_at)
   const showCountDate = hasBeenReturned && pkg.status === 'LIVRE'
 
   async function handleAssign(driverId: string) {
@@ -213,9 +223,17 @@ export default function AdminPackageDetail() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">
-          Statut (compte-rendu du livreur)
-        </h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-gray-700">Statut (compte-rendu du livreur)</h2>
+          {isSuperAdmin && !isTrashed && (
+            <button
+              onClick={() => setCorrectingStatus(true)}
+              className="flex shrink-0 items-center gap-1 rounded-lg border border-amber-200 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50"
+            >
+              <Undo2 className="h-3.5 w-3.5" /> Corriger le statut
+            </button>
+          )}
+        </div>
         <PackageStatusActions pkg={pkg} onChanged={refresh} />
       </div>
 
@@ -230,6 +248,17 @@ export default function AdminPackageDetail() {
           onClose={() => setEditing(false)}
           onSaved={async () => {
             setEditing(false)
+            await refresh()
+          }}
+        />
+      )}
+
+      {correctingStatus && (
+        <CorrectStatusModal
+          pkg={pkg}
+          onClose={() => setCorrectingStatus(false)}
+          onSaved={async () => {
+            setCorrectingStatus(false)
             await refresh()
           }}
         />
@@ -386,6 +415,70 @@ function CountDateModal({
             Enregistrer
           </Button>
         </div>
+      </form>
+    </Modal>
+  )
+}
+
+function CorrectStatusModal({
+  pkg,
+  onClose,
+  onSaved,
+}: {
+  pkg: Package
+  onClose: () => void
+  onSaved: () => void | Promise<void>
+}) {
+  const choices = (Object.keys(PACKAGE_STATUS_LABELS) as PackageStatus[]).filter((s) => s !== pkg.status)
+  const [status, setStatus] = useState<PackageStatus>(choices[0])
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await correctPackageStatus(pkg.id, status, reason)
+      await onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal title="Corriger le statut" onClose={onClose} centered>
+      <form onSubmit={handleSubmit}>
+        <p className="mb-4 text-sm text-gray-600">
+          Statut actuel : <strong>{PACKAGE_STATUS_LABELS[pkg.status]}</strong>. La correction permet
+          de revenir en arrière (ex : colis marqué livré par erreur). Les étapes défaites restent
+          visibles dans l'historique, marquées annulées.
+        </p>
+        <Field label="Nouveau statut">
+          <Select value={status} onChange={(e) => setStatus(e.target.value as PackageStatus)}>
+            {choices.map((s) => (
+              <option key={s} value={s}>
+                {PACKAGE_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Motif de la correction">
+          <Textarea
+            required
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Ex : marqué livré par erreur, le colis est toujours en gare"
+          />
+        </Field>
+        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        <Button type="submit" loading={loading} className="w-full">
+          Corriger le statut
+        </Button>
       </form>
     </Modal>
   )

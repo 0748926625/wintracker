@@ -123,7 +123,8 @@ export async function getPackage(id: string): Promise<Package> {
 
 /**
  * Colis livrés ou échoués par un agent (bilan d'activité), le plus récent en premier.
- * Les colis à la corbeille sont exclus, comme dans tous les autres bilans.
+ * Exclut les colis à la corbeille, les étapes annulées par une correction et
+ * les corrections elles-mêmes (actions du super admin, pas de l'agent).
  */
 export async function listAgentEvents(userId: string): Promise<AgentPackageEvent[]> {
   const data = await fetchAll(() =>
@@ -132,6 +133,8 @@ export async function listAgentEvents(userId: string): Promise<AgentPackageEvent
       .select(`id, new_status, created_at, package:packages!inner(${PACKAGE_SELECT})`)
       .eq('changed_by', userId)
       .in('new_status', ['LIVRE', 'ECHEC'])
+      .is('cancelled_at', null)
+      .eq('is_correction', false)
       .is('package.deleted_at', null)
       .order('created_at', { ascending: false })
       .order('id'),
@@ -335,4 +338,21 @@ export async function quickSetStatus(
     else current = await setStatus(pkg.id, step)
   }
   return current
+}
+
+/**
+ * Corrige le statut d'un colis vers n'importe quel statut (retour en arrière
+ * compris), avec un motif obligatoire. Réservé SUPER_ADMIN — vérifié en base.
+ */
+export async function correctPackageStatus(
+  packageId: string,
+  status: PackageStatus,
+  reason: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('correct_package_status', {
+    p_package_id: packageId,
+    p_new_status: status,
+    p_reason: reason,
+  })
+  if (error) throw error
 }
