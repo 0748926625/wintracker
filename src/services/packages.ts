@@ -1,39 +1,45 @@
-import { supabase } from '../lib/supabase'
+import { fetchAll, supabase } from '../lib/supabase'
 import type { AgentPackageEvent, Package, PackageEvent, PackageStatus } from '../types/database'
 import { getCurrentLocation, type GeoPoint } from '../lib/geolocation'
 
 const PACKAGE_SELECT = `*, company:companies(*, commission_tiers:company_commission_tiers(*)), driver:drivers(*, profile:profiles(*)), agent:gare_agents(*), creator:profiles!packages_created_by_fkey(*)`
 
 export async function listAllPackages(): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
 /** Colis à la corbeille (toutes compagnies) — Super Admin uniquement. */
 export async function listDeletedPackages(): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .not('deleted_at', 'is', null)
-    .order('deleted_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
 /** Colis à la corbeille d'une compagnie. */
 export async function listCompanyDeletedPackages(companyId: string): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .eq('company_id', companyId)
-    .not('deleted_at', 'is', null)
-    .order('deleted_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .eq('company_id', companyId)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
@@ -65,36 +71,42 @@ export async function purgePackage(id: string): Promise<void> {
 }
 
 export async function listCompanyPackages(companyId: string): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .eq('company_id', companyId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .eq('company_id', companyId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
 /** Colis de plusieurs compagnies à la fois (ex: succursales d'un même groupe). */
 export async function listCompaniesPackages(companyIds: string[]): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .in('company_id', companyIds)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .in('company_id', companyIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
 export async function listDriverPackages(driverId: string): Promise<Package[]> {
-  const { data, error } = await supabase
-    .from('packages')
-    .select(PACKAGE_SELECT)
-    .is('deleted_at', null)
-    .eq('driver_id', driverId)
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('packages')
+      .select(PACKAGE_SELECT)
+      .is('deleted_at', null)
+      .eq('driver_id', driverId)
+      .order('created_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as Package[]
 }
 
@@ -110,13 +122,15 @@ export async function getPackage(id: string): Promise<Package> {
 
 /** Colis livrés ou échoués par un agent (bilan d'activité), le plus récent en premier. */
 export async function listAgentEvents(userId: string): Promise<AgentPackageEvent[]> {
-  const { data, error } = await supabase
-    .from('package_events')
-    .select(`id, new_status, created_at, package:packages(${PACKAGE_SELECT})`)
-    .eq('changed_by', userId)
-    .in('new_status', ['LIVRE', 'ECHEC'])
-    .order('created_at', { ascending: false })
-  if (error) throw error
+  const data = await fetchAll(() =>
+    supabase
+      .from('package_events')
+      .select(`id, new_status, created_at, package:packages(${PACKAGE_SELECT})`)
+      .eq('changed_by', userId)
+      .in('new_status', ['LIVRE', 'ECHEC'])
+      .order('created_at', { ascending: false })
+      .order('id'),
+  )
   return data as unknown as AgentPackageEvent[]
 }
 

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { fetchAll, supabase } from '../lib/supabase'
 
 /**
  * Tables exportées pour la sauvegarde. Les comptes de connexion (auth.users,
@@ -19,6 +19,12 @@ const BACKUP_TABLES = [
   'expenses',
 ] as const
 
+/** Tri stable pour la pagination, pour les tables sans colonne `id`. */
+const ORDER_KEYS: Partial<Record<(typeof BACKUP_TABLES)[number], string>> = {
+  company_commission_tiers: 'company_id',
+  agent_companies: 'agent_profile_id',
+}
+
 export interface BackupResult {
   generated_at: string
   tables: Record<string, unknown[]>
@@ -30,10 +36,19 @@ export async function exportAllData(): Promise<BackupResult> {
   const counts: Record<string, number> = {}
 
   for (const table of BACKUP_TABLES) {
-    const { data, error } = await supabase.from(table).select('*')
-    if (error) throw new Error(`Échec de l'export de "${table}" : ${error.message}`)
-    tables[table] = data ?? []
-    counts[table] = data?.length ?? 0
+    let data: unknown[]
+    try {
+      data = await fetchAll(() =>
+        supabase
+          .from(table)
+          .select('*')
+          .order(ORDER_KEYS[table] ?? 'id'),
+      )
+    } catch (e) {
+      throw new Error(`Échec de l'export de "${table}" : ${(e as { message?: string }).message}`)
+    }
+    tables[table] = data
+    counts[table] = data.length
   }
 
   return { generated_at: new Date().toISOString(), tables, counts }
