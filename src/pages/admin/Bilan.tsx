@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { useAuth } from '../../hooks/useAuth'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
 import { getCompany, listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
 import { getDriver } from '../../services/drivers'
-import { getAgent } from '../../services/agents'
+import { getAgent, getAgentCompanies } from '../../services/agents'
 import {
   listAllPackages,
   listCompanyPackages,
@@ -22,7 +23,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Button } from '../../components/ui/Button'
 
-type BilanType = 'all' | 'group' | 'company' | 'driver' | 'agent'
+type BilanType = 'all' | 'group' | 'company' | 'driver' | 'agent' | 'gares'
 
 const TYPE_LABELS: Record<BilanType, string> = {
   all: 'Global',
@@ -30,7 +31,11 @@ const TYPE_LABELS: Record<BilanType, string> = {
   company: 'Compagnie',
   driver: 'Livreur',
   agent: 'Agent Wintrack',
+  gares: 'Mes gares',
 }
+
+/** Bilans ouverts aux agents Wintrack, limités à leurs gares (RLS). */
+const AGENT_BILAN_TYPES: BilanType[] = ['company', 'gares']
 
 interface BilanRow {
   id: string
@@ -46,6 +51,9 @@ export default function AdminBilan() {
   const { type, id } = useParams<{ type: BilanType; id: string }>()
   const navigate = useNavigate()
   const pf = usePeriodFilter()
+  const { profile } = useAuth()
+  const isAgent = profile?.role === 'AGENT'
+  const allowed = !!type && type in TYPE_LABELS && (!isAgent || AGENT_BILAN_TYPES.includes(type))
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +64,7 @@ export default function AdminBilan() {
   const [statCards, setStatCards] = useState<{ label: string; value: number; accent?: string }[]>([])
 
   useEffect(() => {
-    if (!type || !id) return
+    if (!type || !id || !allowed) return
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -84,6 +92,13 @@ export default function AdminBilan() {
         setEntityName(group?.name ?? 'Groupe')
         setEntitySubtitle(`${groupCompanies.length} compagnie(s) : ${groupCompanies.map((c) => c.name).join(', ')}`)
         buildPackageBilan(packages, groupCompanies.map((c) => c.id))
+      } else if (type === 'gares') {
+        const gares = await getAgentCompanies(profile!.id)
+        const packages = gares.length ? await listCompaniesPackages(gares.map((c) => c.id)) : []
+        if (cancelled) return
+        setEntityName(profile!.name)
+        setEntitySubtitle(`${gares.length} gare(s) : ${gares.map((c) => c.name).join(', ')}`)
+        buildPackageBilan(packages, gares.map((c) => c.id))
       } else if (type === 'driver') {
         const driver = await getDriver(id!)
         const packages = await listDriverPackages(id!)
@@ -110,8 +125,13 @@ export default function AdminBilan() {
         { label: 'Total colis', value: period.length },
         { label: 'Colis livrés', value: livres.length, accent: 'text-green-600' },
         { label: "Chiffre d'affaires (F)", value: cash },
-        { label: 'Commissions versées (F)', value: commission },
-        { label: 'Marge (F)', value: cash - commission, accent: 'text-green-600' },
+        // Commissions et marge : données financières réservées au super admin.
+        ...(isAgent
+          ? []
+          : [
+              { label: 'Commissions versées (F)', value: commission },
+              { label: 'Marge (F)', value: cash - commission, accent: 'text-green-600' },
+            ]),
       ])
       setRows(
         period.map((p) => ({
@@ -184,9 +204,9 @@ export default function AdminBilan() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, id, pf.mode, pf.start.getTime(), pf.end.getTime()])
+  }, [type, id, allowed, pf.mode, pf.start.getTime(), pf.end.getTime()])
 
-  if (!type || !id || !(type in TYPE_LABELS)) {
+  if (!type || !id || !allowed) {
     return <p className="p-8 text-gray-500">Bilan introuvable.</p>
   }
 

@@ -126,7 +126,7 @@ export default function App() {
           <Route
             path="/admin/bilan/:type/:id"
             element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'AGENT']}>
                 <AdminBilan />
               </ProtectedRoute>
             }

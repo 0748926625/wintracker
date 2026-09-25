@@ -16,7 +16,7 @@ import {
 } from 'recharts'
 import { useAuth } from '../../hooks/useAuth'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
-import { useGare } from '../../hooks/useGare'
+import { ALL_GARES, useAgentGareScope } from '../../hooks/useAgentGareScope'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
 import { effectiveDate } from '../../lib/packageDate'
 import { listAllPackages, listCompanyPackages, listCompaniesPackages } from '../../services/packages'
@@ -26,6 +26,7 @@ import { StatCard } from '../../components/ui/StatCard'
 import { PageLoader } from '../../components/ui/PageLoader'
 import { Select } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
+import { AgentGareSelect } from '../../components/AgentGareSelect'
 import {
   PACKAGE_STATUS_LABELS,
   type Company,
@@ -58,7 +59,7 @@ function dayBounds(d: Date) {
 
 export default function AdminDashboard() {
   const { profile } = useAuth()
-  const { activeCompanyId: gareCompanyId } = useGare()
+  const gare = useAgentGareScope()
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
 
   const [companies, setCompanies] = useState<Company[]>([])
@@ -91,12 +92,12 @@ export default function AdminDashboard() {
   )
 
   const activeCompanyIds = useMemo(() => {
-    if (!isSuperAdmin) return gareCompanyId ? [gareCompanyId] : null
+    if (!isSuperAdmin) return gare.companyIds
     if (scope.type === 'ALL') return null
     if (scope.type === 'COMPANY') return [scope.id]
     if (scope.type === 'GROUP') return companies.filter((c) => c.group_id === scope.id).map((c) => c.id)
     return companies.filter((c) => c.commune === scope.id).map((c) => c.id)
-  }, [isSuperAdmin, gareCompanyId, scope, companies])
+  }, [isSuperAdmin, gare.companyIds, scope, companies])
 
   const fetcher = useCallback(() => {
     if (!activeCompanyIds) return listAllPackages()
@@ -104,8 +105,11 @@ export default function AdminDashboard() {
     return listCompaniesPackages(activeCompanyIds)
   }, [activeCompanyIds])
   const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
-  const bilanHref =
-    scope.type === 'ALL'
+  const bilanHref = !isSuperAdmin
+    ? gare.scope === ALL_GARES
+      ? '/admin/bilan/gares/mine'
+      : `/admin/bilan/company/${gare.scope}`
+    : scope.type === 'ALL'
       ? '/admin/bilan/all/all'
       : scope.type === 'COMPANY'
         ? `/admin/bilan/company/${scope.id}`
@@ -198,15 +202,14 @@ export default function AdminDashboard() {
               </optgroup>
             </Select>
           )}
+          {!isSuperAdmin && <AgentGareSelect gare={gare} className="sm:max-w-xs" />}
           <PeriodSwitcher pf={pf} />
-          {isSuperAdmin && (
-            <Link
-              to={bilanHref}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-brand-600 hover:bg-gray-50"
-            >
-              <Printer className="h-4 w-4" /> Bilan
-            </Link>
-          )}
+          <Link
+            to={bilanHref}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-brand-600 hover:bg-gray-50"
+          >
+            <Printer className="h-4 w-4" /> Bilan
+          </Link>
         </div>
       </div>
 

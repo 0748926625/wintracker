@@ -4,6 +4,7 @@ import { ChevronDown, Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
+import { useAgentGareScope } from '../../hooks/useAgentGareScope'
 import { useRealtimePackages } from '../../hooks/useRealtimePackages'
 import {
   listAllPackages,
@@ -15,6 +16,7 @@ import {
 } from '../../services/packages'
 import { listCompanies } from '../../services/companies'
 import { listCompanyGroups } from '../../services/groups'
+import { listDrivers } from '../../services/drivers'
 import { listGareAgents, createGareAgent } from '../../services/gareAgents'
 import { effectiveDate } from '../../lib/packageDate'
 import { reachableStatuses } from '../../lib/statusTransitions'
@@ -25,6 +27,7 @@ import {
   PRICE_OPTIONS,
   type Company,
   type CompanyGroup,
+  type Driver,
   type GareAgent,
   type Package,
   type PackageStatus,
@@ -35,6 +38,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select, Textarea } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
+import { AgentGareSelect } from '../../components/AgentGareSelect'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -55,14 +59,21 @@ type Scope =
 export default function AdminPackages() {
   const { profile } = useAuth()
   const isSuperAdmin = profile?.role === 'SUPER_ADMIN'
-  const { activeCompanyId } = useGare()
+  const gare = useAgentGareScope()
   const [filter, setFilter] = useState<PackageStatus | 'TOUS'>('TOUS')
   const [search, setSearch] = useState('')
   const [scope, setScope] = useState<Scope>({ type: 'ALL' })
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [creating, setCreating] = useState(false)
+  /** 'ALL' = tous les livreurs, 'NONE' = colis sans livreur, sinon id du livreur. */
+  const [driverFilter, setDriverFilter] = useState('ALL')
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const pf = usePeriodFilter()
+
+  useEffect(() => {
+    listDrivers().then(setDrivers)
+  }, [])
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -90,12 +101,12 @@ export default function AdminPackages() {
   )
 
   const activeCompanyIds = useMemo(() => {
-    if (!isSuperAdmin) return activeCompanyId ? [activeCompanyId] : null
+    if (!isSuperAdmin) return gare.companyIds
     if (scope.type === 'ALL') return null
     if (scope.type === 'COMPANY') return [scope.id]
     if (scope.type === 'GROUP') return filterCompanies.filter((c) => c.group_id === scope.id).map((c) => c.id)
     return filterCompanies.filter((c) => c.commune === scope.id).map((c) => c.id)
-  }, [isSuperAdmin, activeCompanyId, scope, filterCompanies])
+  }, [isSuperAdmin, gare.companyIds, scope, filterCompanies])
 
   const fetcher = useCallback(() => {
     if (!activeCompanyIds) return listAllPackages()
@@ -126,7 +137,11 @@ export default function AdminPackages() {
   }
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
-  const byPeriod = byStatus.filter((p) => pf.inRange(effectiveDate(p)))
+  const byDriver =
+    driverFilter === 'ALL'
+      ? byStatus
+      : byStatus.filter((p) => (driverFilter === 'NONE' ? !p.driver_id : p.driver_id === driverFilter))
+  const byPeriod = byDriver.filter((p) => pf.inRange(effectiveDate(p)))
   const query = search.trim().toLowerCase()
   const filtered = query
     ? byPeriod.filter(
@@ -205,6 +220,23 @@ export default function AdminPackages() {
             </optgroup>
           </Select>
         )}
+
+        {!isSuperAdmin && <AgentGareSelect gare={gare} className="w-full sm:w-auto" />}
+
+        <Select
+          value={driverFilter}
+          onChange={(e) => setDriverFilter(e.target.value)}
+          className="w-full sm:w-auto"
+        >
+          <option value="ALL">Tous les livreurs</option>
+          <option value="NONE">Sans livreur</option>
+          {drivers.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.profile?.name}
+              {d.status === 'INACTIVE' ? ' (inactif)' : ''}
+            </option>
+          ))}
+        </Select>
 
         <PeriodSwitcher pf={pf} />
       </div>
