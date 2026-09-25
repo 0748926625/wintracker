@@ -30,18 +30,39 @@ const TABLES = [
   'expenses',
 ]
 
+// Tri stable pour la pagination, pour les tables sans colonne `id`.
+const ORDER_KEYS = {
+  company_commission_tiers: 'company_id',
+  agent_companies: 'agent_profile_id',
+}
+
 const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }
+
+// Supabase plafonne chaque réponse à 1000 lignes sans erreur : on enchaîne
+// les pages jusqu'à en recevoir une incomplète.
+const PAGE_SIZE = 1000
+
+async function fetchTable(table) {
+  const order = ORDER_KEYS[table] ?? 'id'
+  const rows = []
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}?select=*&order=${order}&limit=${PAGE_SIZE}&offset=${offset}`
+    const res = await fetch(url, { headers })
+    if (!res.ok) {
+      throw new Error(`Échec de l'export de "${table}" : ${res.status} ${await res.text()}`)
+    }
+    const page = await res.json()
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) return rows
+  }
+}
 
 async function main() {
   const tables = {}
   const counts = {}
 
   for (const table of TABLES) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, { headers })
-    if (!res.ok) {
-      throw new Error(`Échec de l'export de "${table}" : ${res.status} ${await res.text()}`)
-    }
-    const data = await res.json()
+    const data = await fetchTable(table)
     tables[table] = data
     counts[table] = data.length
   }
