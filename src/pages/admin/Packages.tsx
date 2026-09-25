@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { ChevronDown, Plus, Search } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useGare } from '../../hooks/useGare'
 import { usePeriodFilter } from '../../hooks/usePeriodFilter'
@@ -9,6 +9,7 @@ import {
   listAllPackages,
   listCompanyPackages,
   listCompaniesPackages,
+  getPackage,
   createPackage,
   type CreatePackageInput,
 } from '../../services/packages'
@@ -21,6 +22,7 @@ import {
   type Company,
   type CompanyGroup,
   type GareAgent,
+  type Package,
   type PackageStatus,
 } from '../../types/database'
 import { PageLoader } from '../../components/ui/PageLoader'
@@ -29,6 +31,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Field, Input, Select, Textarea } from '../../components/ui/Field'
 import { PeriodSwitcher } from '../../components/ui/PeriodSwitcher'
+import { PackageStatusActions } from '../../components/PackageStatusActions'
 
 const FILTERS: { label: string; value: PackageStatus | 'TOUS' }[] = [
   { label: 'Tous', value: 'TOUS' },
@@ -56,6 +59,7 @@ export default function AdminPackages() {
   const [filterCompanies, setFilterCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<CompanyGroup[]>([])
   const [creating, setCreating] = useState(false)
+  const [statusPackage, setStatusPackage] = useState<Package | null>(null)
   const pf = usePeriodFilter()
 
   useEffect(() => {
@@ -97,7 +101,7 @@ export default function AdminPackages() {
     return listCompaniesPackages(activeCompanyIds)
   }, [activeCompanyIds])
   const singleCompanyId = activeCompanyIds?.length === 1 ? activeCompanyIds[0] : null
-  const { packages: livePackages, loading } = useRealtimePackages(
+  const { packages: livePackages, loading, setPackages } = useRealtimePackages(
     fetcher,
     singleCompanyId ? 'company_id' : 'all',
     singleCompanyId ?? 'all',
@@ -113,6 +117,13 @@ export default function AdminPackages() {
   )
 
   if (loading) return <PageLoader />
+
+  /** Recharge le colis modifié sans attendre la notification temps réel. */
+  async function handleStatusChanged() {
+    const fresh = await getPackage(statusPackage!.id)
+    setPackages((prev) => prev.map((p) => (p.id === fresh.id ? fresh : p)))
+    setStatusPackage(null)
+  }
 
   const byStatus = filter === 'TOUS' ? packages : packages.filter((p) => p.status === filter)
   const byPeriod = byStatus.filter((p) => pf.inRange(effectiveDate(p)))
@@ -223,7 +234,20 @@ export default function AdminPackages() {
                 <td className="px-4 py-3 text-gray-900">{p.recipient_name}</td>
                 <td className="px-4 py-3 text-gray-600">{p.price ? `${p.price} F` : '—'}</td>
                 <td className="px-4 py-3">
-                  <StatusBadge status={p.status} />
+                  {p.status === 'LIVRE' ? (
+                    <StatusBadge status={p.status} />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setStatusPackage(p)}
+                      title="Changer le statut"
+                      className="rounded-full hover:opacity-80"
+                    >
+                      <StatusBadge status={p.status} className="gap-1">
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      </StatusBadge>
+                    </button>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-600">{p.driver?.profile?.name || '—'}</td>
                 <td className="px-4 py-3 text-gray-500">
@@ -241,6 +265,19 @@ export default function AdminPackages() {
           </tbody>
         </table>
       </div>
+
+      {statusPackage && (
+        <Modal
+          title={`Statut — ${statusPackage.external_reference || statusPackage.tracking_number}`}
+          onClose={() => setStatusPackage(null)}
+          centered
+        >
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+            Statut actuel : <StatusBadge status={statusPackage.status} />
+          </div>
+          <PackageStatusActions pkg={statusPackage} onChanged={handleStatusChanged} />
+        </Modal>
+      )}
 
       {creating && (
         <CreatePackageModal onClose={() => setCreating(false)} onSaved={() => setCreating(false)} />
